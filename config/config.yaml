@@ -1,0 +1,23 @@
+# database configuration
+database:
+  host: localhost
+  port: 6379
+  password: dbpassword
+# Server configuration
+server:
+  address: localhost
+  port: 8080
+# Payment gateway configuration
+payment_gateway:
+  url: https://banktest.ir/api
+  api_key: myapikey
+  api_secret: myapisecret
+# Mock API configuration
+mock_api:
+  url: https://mockapi.com/api
+  auth_key: myauthkey
+  auth_secret: myauthsecret
+# Security configuration
+security:
+  secret_key: mysecretkey
+  encryption_algorithm: AES-256  
