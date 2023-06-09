@@ -2,11 +2,18 @@ package config
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/go-redis/redis"
 	"github.com/spf13/viper"
 )
 
+type Configs struct {
+	DBConfig   DatabaseConfig
+	Sconfig    ServerConfig
+	PGconfig   PaymentGatewayConfig
+	MAPIConfig MockAPIConfig
+	SeConfig   SecurityConfig
+}
 type DatabaseConfig struct {
 	Host     string
 	Port     int
@@ -36,11 +43,14 @@ type SecurityConfig struct {
 }
 
 // Load all configuration values from YAML file
-func LoadConfig() (*DatabaseConfig, *ServerConfig, *PaymentGatewayConfig, *MockAPIConfig, *SecurityConfig, error) {
-	viper.SetConfigFile("config.yaml")
-	err := viper.ReadInConfig()
+func LoadConfig(f *os.File) (*Configs, error) {
+
+	// viper.AddConfigPath(".")
+	viper.SetConfigType("ymal")
+	// viper.SetConfigFile(fName)
+	err := viper.ReadConfig(f)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("failed to read config file: %s", err)
+		return nil, fmt.Errorf("failed to read config file: %s", err)
 	}
 	dbConfig := &DatabaseConfig{
 		Host:     viper.GetString("database.host"),
@@ -68,29 +78,12 @@ func LoadConfig() (*DatabaseConfig, *ServerConfig, *PaymentGatewayConfig, *MockA
 		SecretKey:           viper.GetString("security.secret_key"),
 		EncryptionAlgorithm: viper.GetString("security.encryption_algorithm"),
 	}
-
-	return dbConfig, serverConfig, paymentGatewayConfig, mockAPIConfig, securityConfig, nil
-}
-
-func main() {
-
-	// Load database config
-	dbConfig, _, _, _, _, err := LoadConfig()
-	if err != nil {
-		panic(fmt.Errorf("failed to load config : %s", err))
+	configs := Configs{
+		DBConfig:   *dbConfig,
+		Sconfig:    *serverConfig,
+		PGconfig:   *paymentGatewayConfig,
+		MAPIConfig: *mockAPIConfig,
+		SeConfig:   *securityConfig,
 	}
-
-	// Connect to Redis
-	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", dbConfig.Host, dbConfig.Port),
-		Password: dbConfig.Password,
-		DB:       0, // use default database
-	})
-
-	// Test the connection
-	pong, err := client.Ping().Result()
-	if err != nil {
-		panic(fmt.Errorf("Error connecting to Redis: %s", err))
-	}
-	fmt.Println("connected to Redis database: ", pong)
+	return &configs, nil
 }
