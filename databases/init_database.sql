@@ -4,31 +4,27 @@ CREATE DATABASE aliagha;
 
 CREATE TABLE aliagha.user
 (
-    id int,
-    name varchar(255),
-    password varchar(255),
-    mobile varchar(16),
-    email varchar(255),
+    id int PRIMARY KEY AUTO_INCREMENT,
+    name varchar(255) NOT NULL ,
+    password varchar(255) NOT NULL ,
+    mobile varchar(16) NOT NULL ,
+    email varchar(255) NOT NULL ,
     created_at datetime DEFAULT NOW(),
-    updated_at datetime DEFAULT NOW() ON UPDATE NOW(),
-
-    PRIMARY KEY(id)
+    updated_at datetime DEFAULT NOW() ON UPDATE NOW()
 );
 
 CREATE TABLE aliagha.passenger (
-    id int,
-    national_code int(10) UNIQUE,
-    name varchar(255),
-    birthdate date,
+    id int PRIMARY KEY AUTO_INCREMENT,
+    national_code int(10) UNIQUE NOT NULL ,
+    name varchar(255) NOT NULL ,
+    birthdate date NOT NULL ,
     created_at datetime DEFAULT NOW(),
-    updated_at datetime DEFAULT NOW() ON UPDATE NOW(),
-
-    PRIMARY KEY(id)
+    updated_at datetime DEFAULT NOW() ON UPDATE NOW()
 );
 
 CREATE TABLE aliagha.user_passenger (
-    u_id int,
-    p_id int,
+    u_id int NOT NULL ,
+    p_id int NOT NULL ,
     created_at datetime DEFAULT NOW(),
     updated_at datetime DEFAULT NOW() ON UPDATE NOW(),
 
@@ -38,46 +34,39 @@ CREATE TABLE aliagha.user_passenger (
 );
 
 CREATE TABLE aliagha.city (
-    id int,
-    name varchar(255) UNIQUE,
+    id int PRIMARY KEY AUTO_INCREMENT,
+    name varchar(255) UNIQUE NOT NULL ,
     created_at datetime DEFAULT NOW(),
-    updated_at datetime DEFAULT NOW() ON UPDATE NOW(),
-
-    PRIMARY KEY(id)
+    updated_at datetime DEFAULT NOW() ON UPDATE NOW()
 );
 
 CREATE TABLE aliagha.airplane (
-    id int,
-    name varchar(255) UNIQUE,
+    id int PRIMARY KEY AUTO_INCREMENT,
+    name varchar(255) UNIQUE NOT NULL ,
     created_at datetime DEFAULT NOW(),
-    updated_at datetime DEFAULT NOW() ON UPDATE NOW(),
-
-    PRIMARY KEY (id)
+    updated_at datetime DEFAULT NOW() ON UPDATE NOW()
 );
 
 CREATE TABLE aliagha.canceling_situation (
-    id int,
-    description varchar(255),
-    data varchar(255),
+    id int PRIMARY KEY AUTO_INCREMENT,
+    description varchar(255) NOT NULL ,
+    data varchar(255) NOT NULL ,
     created_at datetime DEFAULT NOW(),
-    updated_at datetime DEFAULT NOW() ON UPDATE NOW(),
-
-    PRIMARY KEY(id)
+    updated_at datetime DEFAULT NOW() ON UPDATE NOW()
 );
 
 CREATE TABLE aliagha.flight (
-    id int,
-    dep_city_id int,
-    arr_city_id int,
-    dep_time datetime,
-    arr_time datetime,
-    airplane_id int,
-    price int,
-    cxl_sit_id int,
+    id int PRIMARY KEY AUTO_INCREMENT,
+    dep_city_id int NOT NULL ,
+    arr_city_id int NOT NULL ,
+    dep_time datetime NOT NULL ,
+    arr_time datetime NOT NULL ,
+    airplane_id int NOT NULL ,
+    price int NOT NULL ,
+    cxl_sit_id int NOT NULL ,
     created_at datetime DEFAULT NOW(),
     updated_at datetime DEFAULT NOW() ON UPDATE NOW(),
 
-    PRIMARY KEY (id),
     FOREIGN KEY (dep_city_id) REFERENCES city(id),
     FOREIGN KEY (arr_city_id) REFERENCES city(id),
     FOREIGN KEY (airplane_id) REFERENCES airplane(id),
@@ -85,32 +74,32 @@ CREATE TABLE aliagha.flight (
 );
 
 CREATE TABLE aliagha.ticket (
-    id int,
-    u_id int,
-    p_id int,
-    f_id int,
-    status int,
+    id int PRIMARY KEY AUTO_INCREMENT,
+    u_id int NOT NULL ,
+    p_id int NOT NULL ,
+    f_id int NOT NULL ,
+    status int NOT NULL ,
     created_at datetime DEFAULT NOW(),
     updated_at datetime DEFAULT NOW() ON UPDATE NOW(),
 
-    PRIMARY KEY (id),
     FOREIGN KEY (u_id) REFERENCES user(id),
     FOREIGN KEY (p_id) REFERENCES passenger(id),
     FOREIGN KEY (f_id) REFERENCES flight(id)
 );
 
 CREATE TABLE aliagha.cancelling (
-    id int,
-    t_id int,
-    description varchar(255),
-    cost int,
+    id int PRIMARY KEY AUTO_INCREMENT,
+    t_id int NOT NULL ,
+    description varchar(255) NOT NULL ,
+    cost int NOT NULL ,
     created_at datetime DEFAULT NOW(),
     updated_at datetime DEFAULT NOW() ON UPDATE NOW(),
 
-    PRIMARY KEY (id),
     FOREIGN KEY (t_id) REFERENCES ticket(id)
 );
 
+# Considering the scarcity of commands available in MySQL,
+# I would advise using PostgresSQL instead in this situation.
 # CREATE TABLE payment (
 #     id int,
 #     u_id int,
