@@ -3,13 +3,10 @@ package databases
 import (
 	"fmt"
 
-	config "aliagha/config"
-
 	"github.com/go-redis/redis"
 )
 
-func init_redis() {
-	var configObj *config.Configs
+func initRedisConn(configObj *config.Configs) (*redis.Client, error) {
 	// Connect to Redis
 	client := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", configObj.DBConfig.Host, configObj.DBConfig.Port),
@@ -23,4 +20,5 @@ func init_redis() {
 		panic(fmt.Errorf("Error connecting to Redis: %s", err))
 	}
 	fmt.Println("connected to Redis database: ", pong)
+	return client, nil
 }

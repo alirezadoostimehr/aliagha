@@ -2,24 +2,33 @@ package config
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/viper"
 )
 
 type Configs struct {
+	RConfig    RedisConfig
 	DBConfig   DatabaseConfig
 	Sconfig    ServerConfig
 	PGconfig   PaymentGatewayConfig
 	MAPIConfig MockAPIConfig
 	SeConfig   SecurityConfig
 }
-type DatabaseConfig struct {
+type RedisConfig struct {
 	Host     string
 	Port     int
 	Password string
 }
-
+type DatabaseConfig struct {
+	Driver   string
+	Host     string
+	Port     int
+	Name     string
+	Username string
+	Password string
+	Charset  string
+	// charset  utf8mb4
+}
 type ServerConfig struct {
 	Address string
 	Port    int
@@ -43,19 +52,27 @@ type SecurityConfig struct {
 }
 
 // Load all configuration values from YAML file
-func LoadConfig(f *os.File) (*Configs, error) {
+func LoadConfig(filePath string) (*Configs, error) {
 
-	// viper.AddConfigPath(".")
-	viper.SetConfigType("ymal")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(filePath)
 	// viper.SetConfigFile(fName)
-	err := viper.ReadConfig(f)
+	err := viper.ReadInConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %s", err)
 	}
+	redisConfig := &RedisConfig{
+		Host:     viper.GetString("redis.host"),
+		Port:     viper.GetInt("redis.port"),
+		Password: viper.GetString("redis.password"),
+	}
 	dbConfig := &DatabaseConfig{
+		Driver:   viper.GetString("database.driver"),
 		Host:     viper.GetString("database.host"),
 		Port:     viper.GetInt("database.port"),
+		Username: viper.GetString("database.username"),
 		Password: viper.GetString("database.password"),
+		Charset:  viper.GetString("database.chaset"),
 	}
 	serverConfig := &ServerConfig{
 		Address: viper.GetString("server.address"),
@@ -79,6 +96,7 @@ func LoadConfig(f *os.File) (*Configs, error) {
 		EncryptionAlgorithm: viper.GetString("security.encryption_algorithm"),
 	}
 	configs := Configs{
+		RConfig:    *redisConfig,
 		DBConfig:   *dbConfig,
 		Sconfig:    *serverConfig,
 		PGconfig:   *paymentGatewayConfig,
