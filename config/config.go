@@ -1,4 +1,4 @@
-package config
+package Config
 
 import (
 	"fmt"
@@ -6,20 +6,20 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Configs struct {
-	RConfig    Redis
-	DBConfig   DatabaseConfig
-	Sconfig    ServerConfig
-	PGconfig   PaymentGatewayConfig
-	MAPIConfig MockAPIConfig
-	SeConfig   SecurityConfig
+type Config struct {
+	Redis          Redis
+	Database       Database
+	Server         Server
+	PaymentGateway PaymentGateway
+	MockAPI        MockAPI
+	Security       Security
 }
 type Redis struct {
 	Host     string
 	Port     int
 	Password string
 }
-type DatabaseConfig struct {
+type Database struct {
 	Driver   string
 	Host     string
 	Port     int
@@ -29,44 +29,44 @@ type DatabaseConfig struct {
 	Charset  string
 	// charset  utf8mb4
 }
-type ServerConfig struct {
+type Server struct {
 	Address string
 	Port    int
 }
 
-type PaymentGatewayConfig struct {
+type PaymentGateway struct {
 	URL       string
 	APIKey    string
 	APISecret string
 }
 
-type MockAPIConfig struct {
+type MockAPI struct {
 	URL        string
 	AuthKey    string
 	AuthSecret string
 }
 
-type SecurityConfig struct {
+type Security struct {
 	SecretKey           string
 	EncryptionAlgorithm string
 }
 
-// Load all configuration values from YAML file
-func LoadConfig(filePath string) (*Configs, error) {
+// Load all  uration values from YAML file
+func Load(filePath string) (*Config, error) {
 
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(filePath)
-	// viper.SetConfigFile(fName)
+	// viper.Set File(fName)
 	err := viper.ReadInConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %s", err)
+		return nil, fmt.Errorf("failed to read   file: %s", err)
 	}
-	redisConfig := &Redis{
+	redis := &Redis{
 		Host:     viper.GetString("redis.host"),
 		Port:     viper.GetInt("redis.port"),
 		Password: viper.GetString("redis.password"),
 	}
-	dbConfig := &DatabaseConfig{
+	database := &Database{
 		Driver:   viper.GetString("database.driver"),
 		Host:     viper.GetString("database.host"),
 		Port:     viper.GetInt("database.port"),
@@ -74,33 +74,33 @@ func LoadConfig(filePath string) (*Configs, error) {
 		Password: viper.GetString("database.password"),
 		Charset:  viper.GetString("database.chaset"),
 	}
-	serverConfig := &ServerConfig{
+	server := &Server{
 		Address: viper.GetString("server.address"),
 		Port:    viper.GetInt("server.port"),
 	}
 
-	paymentGatewayConfig := &PaymentGatewayConfig{
+	paymentGateway := &PaymentGateway{
 		URL:       viper.GetString("payment_gateway.url"),
 		APIKey:    viper.GetString("payment_gateway.api_key"),
 		APISecret: viper.GetString("payment_gateway.api_secret"),
 	}
 
-	mockAPIConfig := &MockAPIConfig{
+	mockAPI := &MockAPI{
 		URL:        viper.GetString("mock_api.url"),
 		AuthKey:    viper.GetString("mock_api.auth_key"),
 		AuthSecret: viper.GetString("mock_api.auth_secret"),
 	}
 
-	securityConfig := &SecurityConfig{
+	security := &Security{
 		SecretKey:           viper.GetString("security.secret_key"),
 		EncryptionAlgorithm: viper.GetString("security.encryption_algorithm"),
 	}
-	return &Configs{
-		RConfig:    *redisConfig,
-		DBConfig:   *dbConfig,
-		Sconfig:    *serverConfig,
-		PGconfig:   *paymentGatewayConfig,
-		MAPIConfig: *mockAPIConfig,
-		SeConfig:   *securityConfig,
+	return &Config{
+		Redis:          *redis,
+		Database:       *database,
+		Server:         *server,
+		PaymentGateway: *paymentGateway,
+		MockAPI:        *mockAPI,
+		Security:       *security,
 	}, nil
 }
