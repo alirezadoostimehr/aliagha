@@ -7,14 +7,14 @@ import (
 )
 
 type Configs struct {
-	RConfig    RedisConfig
+	RConfig    Redis
 	DBConfig   DatabaseConfig
 	Sconfig    ServerConfig
 	PGconfig   PaymentGatewayConfig
 	MAPIConfig MockAPIConfig
 	SeConfig   SecurityConfig
 }
-type RedisConfig struct {
+type Redis struct {
 	Host     string
 	Port     int
 	Password string
@@ -61,7 +61,7 @@ func LoadConfig(filePath string) (*Configs, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %s", err)
 	}
-	redisConfig := &RedisConfig{
+	redisConfig := &Redis{
 		Host:     viper.GetString("redis.host"),
 		Port:     viper.GetInt("redis.port"),
 		Password: viper.GetString("redis.password"),
@@ -95,13 +95,12 @@ func LoadConfig(filePath string) (*Configs, error) {
 		SecretKey:           viper.GetString("security.secret_key"),
 		EncryptionAlgorithm: viper.GetString("security.encryption_algorithm"),
 	}
-	configs := Configs{
+	return &Configs{
 		RConfig:    *redisConfig,
 		DBConfig:   *dbConfig,
 		Sconfig:    *serverConfig,
 		PGconfig:   *paymentGatewayConfig,
 		MAPIConfig: *mockAPIConfig,
 		SeConfig:   *securityConfig,
-	}
-	return &configs, nil
+	}, nil
 }
