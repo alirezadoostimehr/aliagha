@@ -52,7 +52,7 @@ type Security struct {
 }
 
 // Load all  uration values from YAML file
-func Load(filePath string) (*Config, error) {
+func Init(filePath string) (*Config, error) {
 
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(filePath)
