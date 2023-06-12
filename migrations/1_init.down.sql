@@ -10,8 +10,6 @@ DROP TABLE IF EXISTS airplane;
 
 DROP TABLE IF EXISTS city;
 
-DROP TABLE IF EXISTS user_passenger;
-
 DROP TABLE IF EXISTS passenger;
 
 DROP TABLE IF EXISTS user;

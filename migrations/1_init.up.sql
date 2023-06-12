@@ -12,22 +12,15 @@ CREATE TABLE IF NOT EXISTS user
 
 CREATE TABLE IF NOT EXISTS passenger (
     id int PRIMARY KEY AUTO_INCREMENT ,
-    national_code int UNIQUE NOT NULL ,
+    u_id int NOT NULL,
+    national_code int NOT NULL ,
     name varchar(255) NOT NULL ,
     birthdate date NOT NULL ,
     created_at datetime DEFAULT NOW() ,
-    updated_at datetime DEFAULT NOW() ON UPDATE NOW()
-);
-
-CREATE TABLE IF NOT EXISTS user_passenger (
-    u_id int NOT NULL ,
-    p_id int NOT NULL ,
-    created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW() ,
 
-    PRIMARY KEY (u_id, p_id) ,
     FOREIGN KEY (u_id) REFERENCES user(id) ,
-    FOREIGN KEY (p_id) REFERENCES passenger(id)
+    UNIQUE (u_id, national_code)
 );
 
 CREATE TABLE IF NOT EXISTS city (
@@ -95,6 +88,3 @@ CREATE TABLE IF NOT EXISTS payment (
     FOREIGN KEY (u_id) REFERENCES user(id) ,
     FOREIGN KEY (ticket_id) REFERENCES ticket(id)
 );
-
-
-
