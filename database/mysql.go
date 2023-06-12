@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	// "github.com/go-sql-driver/mysql"
-
 	"github.com/golang-migrate/migrate/v4"
 	msql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -16,24 +14,15 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-type MySQLConfig struct {
-	Driver   string `yaml:"driver"`
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	Name     string `yaml:"name"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-}
-
-func MigrateUpDB(username, password, host, port, dbname, address string) error {
+func MigrateDB(username, password, host, port, dbname, address, job string) error {
 	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:%s)/",
 		username, password, host, port)
 
-	db1, err := sql.Open("mysql", dataSourceName)
+	dbStart, err := sql.Open("mysql", dataSourceName)
 	if err != nil {
 		panic(err)
 	}
-	_, err = db1.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", "aliagha"))
+	_, err = dbStart.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", "aliagha"))
 	if err != nil {
 		panic(err)
 	}
@@ -56,38 +45,13 @@ func MigrateUpDB(username, password, host, port, dbname, address string) error {
 	if err != nil {
 		return err
 	}
-	err = m.Up()
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
-func MigrateDownDB(username, password, host, port, dbname, address string) error {
-
-	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?multiStatements=true",
-		username, password, host, port, dbname)
-	db, err := sql.Open("mysql", dataSourceName)
-	if err != nil {
-		return err
+	if job == "up" {
+		err = m.Up()
+	} else {
+		err = m.Down()
 	}
-	driver, err := mysql.WithInstance(db, &mysql.Config{})
-	if err != nil {
-		return err
-	}
-	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", address),
-		"mysql",
-		driver,
-	)
-	if err != nil {
-		return err
-	}
-	err = m.Down()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func InitDB(username, password, host, name, dbname string, port int) (*gorm.DB, error) {
