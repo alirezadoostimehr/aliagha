@@ -6,12 +6,13 @@ redis:
 # database configuration
 database:  
   driver: mysql
-  host: localhost
+  host: "127.0.0.1"
   port: 3306
-  name: mydb
+  name: aliagha
   username: root
   password: root
-  charset: utf8mb4  
+  charset: utf8mb4
+  migrationaddress: "./migrations/"
 # Server configuration
 server:
   address: localhost

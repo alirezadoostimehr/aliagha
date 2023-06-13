@@ -14,7 +14,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-func MigrateDB(username, password, host, port, dbname, address, job string) error {
+func MigrateDB(username, password, host, port, dbname, address, action string) error {
 	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:%s)/",
 		username, password, host, port)
 
@@ -46,7 +46,7 @@ func MigrateDB(username, password, host, port, dbname, address, job string) erro
 		return err
 	}
 
-	if job == "up" {
+	if action == "up" {
 		err = m.Up()
 	} else {
 		err = m.Down()

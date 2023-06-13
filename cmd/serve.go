@@ -40,7 +40,7 @@ func init() {
 
 func startServer() {
 	//todo: get config path as a flag
-	cfg, err := config.Init(config.Params{FilePath: "config.yaml", FileType: "ymal"})
+	cfg, err := config.Init(config.Params{FilePath: "config.yaml", FileType: "yaml"})
 	if err != nil {
 		panic(err)
 	}
