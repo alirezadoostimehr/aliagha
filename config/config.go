@@ -50,13 +50,18 @@ type Security struct {
 	SecretKey           string
 	EncryptionAlgorithm string
 }
+type Params struct {
+	FilePath string
+	FileName string
+	FileType string
+}
 
 // Load all  uration values from YAML file
-func Init(filePath string) (*Config, error) {
+func Init(param Params) (*Config, error) {
 
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(filePath)
-	// viper.Set File(fName)
+	viper.SetConfigType(param.FileType)
+	viper.AddConfigPath(param.FilePath)
+	// viper.SetConfigFile(param.FileName)
 	err := viper.ReadInConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read   file: %s", err)

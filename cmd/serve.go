@@ -4,6 +4,7 @@ import (
 	"aliagha/config"
 	"aliagha/databases"
 	"aliagha/http/handler"
+
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,7 @@ func init() {
 
 func startServer() {
 	//todo: get config path as a flag
-	cfg, err := config.Init("config.yaml")
+	cfg, err := config.Init(config.Params{FilePath: "config.yaml", FileType: "ymal"})
 	if err != nil {
 		panic(err)
 	}
