@@ -40,95 +40,74 @@ Flags:
 	
 It is recommended to run this command before starting the application to ensure that the necessary tables and columns are available.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		migrateCobra()
+		migrateDB()
 	},
 }
 
-type myEnum string
-
-func (e *myEnum) String() string {
-	return string(*e)
-}
-
-func (e *myEnum) Set(v string) error {
-	switch v {
-	case "up", "down":
-		*e = myEnum(v)
-		return nil
-	default:
-		return errors.New(`must be either "up" or "down"`)
-	}
-}
-
-func (e *myEnum) Type() string {
-	return "string"
-}
-
-var Action myEnum
-var Config, MigrationFolder string
+var action string
+var configFolder, migrationFolder string
 
 func init() {
 	rootCmd.AddCommand(migrateCmd)
-	migrateCmd.Flags().VarP(&Action, "action", "a", `action to perform: "up" or "down"`)
-	migrateCmd.Flags().StringVarP(&Config, "config", "c", "", "path to custom configuration file in YAML format")
-	migrateCmd.Flags().StringVarP(&MigrationFolder, "folder", "f", "", "path to migration folder")
+	migrateCmd.Flags().StringVarP(&action, "action", "a", "", `action to perform: "up" or "down"`)
+	migrateCmd.Flags().StringVarP(&configFolder, "config", "c", "", "path to custom configuration file in YAML format")
+	migrateCmd.Flags().StringVarP(&migrationFolder, "folder", "f", "", "path to migration folder")
 }
 
-func migrateCobra() {
-	cfg, err := config.Init(config.Params{FilePath: Config, FileType: "yaml"})
+func migrateDB() {
+	cfg, err := config.Init(config.Params{FilePath: configFolder, FileType: "yaml"})
 	if err != nil {
 		panic(err)
 	}
+	username := cfg.Database.Username
+	password := cfg.Database.Password
+	host := cfg.Database.Host
+	port := strconv.Itoa(cfg.Database.Port)
+	dbname := cfg.Database.Name
 
-	err = MigrateDB(
-		cfg.Database.Username,
-		cfg.Database.Password,
-		cfg.Database.Host,
-		strconv.Itoa(cfg.Database.Port),
-		cfg.Database.Name,
-		Action.String())
-	if err != nil && err.Error() != "no change" {
-		panic(err)
-	}
-
-}
-
-func MigrateDB(username, password, host, port, dbname, action string) error {
 	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:%s)/",
 		username, password, host, port)
 
 	dbStart, err := sql.Open("mysql", dataSourceName)
 	if err != nil {
-		return err
+		panic(err)
 	}
+
 	_, err = dbStart.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", "aliagha"))
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	dataSourceName = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?multiStatements=true",
 		username, password, host, port, dbname)
 	db, err := sql.Open("mysql", dataSourceName)
 	if err != nil {
-		return err
+		panic(err)
 	}
+
 	driver, err := mysql.WithInstance(db, &mysql.Config{})
 	if err != nil {
-		return err
+		panic(err)
 	}
+
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", MigrationFolder),
+		fmt.Sprintf("file://%s", migrationFolder),
 		"mysql",
 		driver,
 	)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	if action == "up" {
 		err = m.Up()
-	} else {
+	} else if action == "down" {
 		err = m.Down()
+	} else {
+		err = errors.New("invalid action")
 	}
-	return err
+
+	if err != nil {
+		panic(err)
+	}
 }
