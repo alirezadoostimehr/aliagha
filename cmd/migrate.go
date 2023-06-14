@@ -40,25 +40,29 @@ Flags:
 	
 It is recommended to run this command before starting the application to ensure that the necessary tables and columns are available.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if action != "up" && action != "down" {
+			panic(errors.New("invalid action"))
+		}
 		migrateDB()
 	},
 }
 
 var action string
-var configFolder, migrationFolder string
+var configPath, migrationFolder string
 
 func init() {
 	rootCmd.AddCommand(migrateCmd)
 	migrateCmd.Flags().StringVarP(&action, "action", "a", "", `action to perform: "up" or "down"`)
-	migrateCmd.Flags().StringVarP(&configFolder, "config", "c", "", "path to custom configuration file in YAML format")
+	migrateCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to custom configuration file in YAML format")
 	migrateCmd.Flags().StringVarP(&migrationFolder, "folder", "f", "", "path to migration folder")
 }
 
 func migrateDB() {
-	cfg, err := config.Init(config.Params{FilePath: configFolder, FileType: "yaml"})
+	cfg, err := config.Init(config.Params{FilePath: configPath, FileType: "yaml"})
 	if err != nil {
 		panic(err)
 	}
+
 	username := cfg.Database.Username
 	password := cfg.Database.Password
 	host := cfg.Database.Host
@@ -73,7 +77,7 @@ func migrateDB() {
 		panic(err)
 	}
 
-	_, err = dbStart.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", "aliagha"))
+	_, err = dbStart.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbname))
 	if err != nil {
 		panic(err)
 	}
@@ -101,10 +105,8 @@ func migrateDB() {
 
 	if action == "up" {
 		err = m.Up()
-	} else if action == "down" {
-		err = m.Down()
 	} else {
-		err = errors.New("invalid action")
+		err = m.Down()
 	}
 
 	if err != nil {
