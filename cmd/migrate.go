@@ -43,6 +43,7 @@ It is recommended to run this command before starting the application to ensure 
 		if action != "up" && action != "down" {
 			panic(errors.New("invalid action"))
 		}
+		
 		migrateDB()
 	},
 }
