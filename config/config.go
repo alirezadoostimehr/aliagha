@@ -27,7 +27,6 @@ type Database struct {
 	Username string
 	Password string
 	Charset  string
-	// charset  utf8mb4
 }
 type Server struct {
 	Address string
@@ -58,13 +57,13 @@ type Params struct {
 
 // Load all  uration values from YAML file
 func Init(param Params) (*Config, error) {
-
 	viper.SetConfigType(param.FileType)
 	viper.AddConfigPath(param.FilePath)
-	// viper.SetConfigFile(param.FileName)
+	// viper.SetConfigFile("./config/config.yaml")
+
 	err := viper.ReadInConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read   file: %s", err)
+		return nil, fmt.Errorf("failed to read file: %s", err)
 	}
 	redis := &Redis{
 		Host:     viper.GetString("redis.host"),
@@ -78,6 +77,7 @@ func Init(param Params) (*Config, error) {
 		Username: viper.GetString("database.username"),
 		Password: viper.GetString("database.password"),
 		Charset:  viper.GetString("database.chaset"),
+		Name:     viper.GetString("database.name"),
 	}
 	server := &Server{
 		Address: viper.GetString("server.address"),
