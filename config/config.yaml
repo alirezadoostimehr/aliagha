@@ -11,8 +11,7 @@ database:
   name: aliagha
   username: root
   password: root
-  charset: utf8mb4
-  migrationaddress: "./migrations/"
+  charset: "utf8mb4"
 # Server configuration
 server:
   address: localhost

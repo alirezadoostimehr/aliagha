@@ -19,20 +19,26 @@ import (
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Migrate database",
-	Long: `Migrate database up or down
+	Long: `This command migrates the database to a schema version.
 
-This command migrates the database up or down to a specific schema version. The direction of the migration is determined by the value of the --action flag, which can be set to "up" or "down".
-	
+The action to perform is determined by the --action flag, which can be set to "up" or "down".
+
+You must specify a custom configuration file in YAML format using the --config flag. By default, this command will not run without a configuration file.
+
+You must also specify a custom folder path for your migration files using the --folder flag.
+
 It is recommended to run this command before starting the application to ensure that the necessary tables and columns are available.
 	
-You must specify a custom configuration file in YAML format using the --config flag. By default, this command will not run without a configuration file.
-	
 Usage:
-	migrate --config [path] --action [up/down]
+	mycommand migrate --config [path] --action [up/down] --folder [path]
 	
 Flags:
 	-a, --action string   Action to perform: "up" or "down" (required)
-	-c, --config string   Path to custom configuration file in YAML format (required)`,
+	-c, --config string   Path to custom configuration file in YAML format (required)
+	-f, --folder string   Path to custom folder for migration files (required)
+	-h, --help            help for migrate
+	
+It is recommended to run this command before starting the application to ensure that the necessary tables and columns are available.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		migrateCobra()
 	},
@@ -59,12 +65,13 @@ func (e *myEnum) Type() string {
 }
 
 var Action myEnum
-var Config string
+var Config, MigrationFolder string
 
 func init() {
 	rootCmd.AddCommand(migrateCmd)
 	migrateCmd.Flags().VarP(&Action, "action", "a", `action to perform: "up" or "down"`)
 	migrateCmd.Flags().StringVarP(&Config, "config", "c", "", "path to custom configuration file in YAML format")
+	migrateCmd.Flags().StringVarP(&MigrationFolder, "folder", "f", "", "path to migration folder")
 }
 
 func migrateCobra() {
@@ -79,7 +86,6 @@ func migrateCobra() {
 		cfg.Database.Host,
 		strconv.Itoa(cfg.Database.Port),
 		cfg.Database.Name,
-		cfg.Database.MigrationAddress,
 		Action.String())
 	if err != nil && err.Error() != "no change" {
 		panic(err)
@@ -87,17 +93,17 @@ func migrateCobra() {
 
 }
 
-func MigrateDB(username, password, host, port, dbname, address, action string) error {
+func MigrateDB(username, password, host, port, dbname, action string) error {
 	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:%s)/",
 		username, password, host, port)
 
 	dbStart, err := sql.Open("mysql", dataSourceName)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	_, err = dbStart.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", "aliagha"))
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	dataSourceName = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?multiStatements=true",
@@ -111,7 +117,7 @@ func MigrateDB(username, password, host, port, dbname, address, action string) e
 		return err
 	}
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", address),
+		fmt.Sprintf("file://%s", MigrationFolder),
 		"mysql",
 		driver,
 	)
