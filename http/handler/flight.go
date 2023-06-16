@@ -15,19 +15,14 @@ import (
 )
 
 type Flight struct {
-	Redis  *redis.Client
-	Flight *models.Flight
-	// Airplane *models.Airplane
+	Redis *redis.Client
 }
-type FlightRequest struct {
-	// ID     int    'json:"flight_id"'
-	// origin string 'json:"flight_org"'
-	// dest   string 'json:"flight_dest"'
-	// date   string 'json:"flight_date"'
-	ID     int
-	origin string
-	dest   string
-	date   string
+
+type GetFlightRequest struct { // Add validation and params
+	ID            int
+	DepartureCity string `json:"departure_city"`
+	ArrivalCity   string `json:"arrival_city"`
+	date          string
 }
 
 func (f *Flight) GetFlightsHandler(c echo.Context) error {
@@ -49,18 +44,18 @@ func (f *Flight) GetFlightsHandler(c echo.Context) error {
 		}
 
 		// Get filter parameters from query params
-		airline := c.QueryParam("airline")
-		aircraftType := c.QueryParam("aircraft_type")
+		//airline := c.QueryParam("airline")
+		//aircraftType := c.QueryParam("aircraft_type")
 		depTimeStr := c.QueryParam("dep_time")
 
 		var filteredFlights []models.Flight
 		for _, flight := range apiResult {
-			if airline != "" && flight.Airplane.Airline != airline {
-				continue
-			}
-			if aircraftType != "" && flight.Airplane.Type != aircraftType {
-				continue
-			}
+			//if airline != "" && flight.Airline != airline {
+			//	continue
+			//}
+			//if aircraftType != "" && flight.Airplane.Name != aircraftType {
+			//	continue
+			//}
 			if depTimeStr != "" {
 				depTime, err := time.Parse("15:04", depTimeStr)
 				if err != nil {
@@ -139,7 +134,7 @@ func (f *Flight) GetFlightsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, flights)
 }
 func (f *Flight) getFlightsFromAPI(c echo.Context) ([]models.Flight, error) {
-	var freq FlightRequest
+	var freq GetFlightRequest
 	origin := c.QueryParam("origin")
 	dest := c.QueryParam("destination")
 	dateStr := c.QueryParam("date")
@@ -205,10 +200,4 @@ func (f *Flight) getFlightFromAPI(c echo.Context) ([]models.Flight, error) {
 	}
 
 	return apiResult, nil
-}
-
-func FlightRoutes(e *echo.Echo, redisClient *redis.Client) {
-	f := &Flight{Redis: redisClient, Flight: &models.Flight{}}
-	e.GET("/flights", f.GetFlightsHandler)
-	// e.GET("/flights/:ID",)
 }
