@@ -14,6 +14,7 @@ type Config struct {
 	PaymentGateway PaymentGateway
 	MockAPI        MockAPI
 	Security       Security
+	JWT            JWT
 }
 
 type Redis struct {
@@ -59,12 +60,11 @@ type Params struct {
 	FileType string
 }
 
-type Jwt struct {
+type JWT struct {
 	SecretKey string
-	ExpiresAt time.Time
+	ExpiresIn time.Time
 }
 
-// Load all  uration values from YAML file
 func Init(param Params) (*Config, error) {
 	viper.SetConfigType(param.FileType)
 	viper.AddConfigPath(param.FilePath)
@@ -110,14 +110,14 @@ func Init(param Params) (*Config, error) {
 		EncryptionAlgorithm: viper.GetString("security.encryption_algorithm"),
 	}
 
-	expiresIn := viper.GetString("jwt.expires_at")
-	expiresAt, err := time.Parse(time.RFC3339, expiresIn)
+	expiresIn, err := time.Parse(time.RFC3339, viper.GetString("jwt.expires_in"))
 	if err != nil {
 		panic(err)
 	}
-	jwt := &Jwt{
+
+	jwt := &JWT{
 		SecretKey: viper.GetString("jwt.secret_key"),
-		ExpiresAt: expiresAt,
+		ExpiresIn: expiresIn,
 	}
 
 	return &Config{
@@ -127,6 +127,6 @@ func Init(param Params) (*Config, error) {
 		PaymentGateway: *paymentGateway,
 		MockAPI:        *mockAPI,
 		Security:       *security,
-		Jwt:            *jwt,
+		JWT:            *jwt,
 	}, nil
 }

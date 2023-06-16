@@ -4,20 +4,20 @@ import (
 	"aliagha/config"
 	"aliagha/models"
 	"database/sql"
-	"encoding/json"
-	"net/http"
-
+	"github.com/dgrijalva/jwt-go"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
+	"net/http"
+
 	"gorm.io/gorm"
 
-	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	DB  *gorm.DB
-	jwt *config.Jwt
+	DB        *gorm.DB
+	JWT       *config.JWT
+	Validator *validator.Validate
 }
 
 type CustomClaims struct {
@@ -32,65 +32,50 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token  string `json:"token"`
-	UserID int32  `json:"user_id"`
-	Name   string `json:"name"`
-	Email  string `json:"email"`
-}
-
-func validateLoginRequest(req *LoginRequest) error {
-	validate := validator.New()
-	return validate.Struct(req)
+	Token string `json:"token"`
 }
 
 func (u *User) Login(c echo.Context) error {
 	var req LoginRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, "")
+		return c.JSON(http.StatusBadRequest, "Bad Request")
 	}
-	if err := validateLoginRequest(&req); err != nil {
+
+	if err := u.Validator.Struct(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	var user models.User
-	err := u.DB.Where("email	 = ?", req.Email).First(&user).Error
+	err := u.DB.Where("email = ?", req.Email).First(&user).Error
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(c.Response(), "Invalid credentials", http.StatusUnauthorized)
+			return c.JSON(http.StatusUnauthorized, "Invalid Credentials")
 		} else {
-			http.Error(c.Response(), "Database error", http.StatusInternalServerError)
+			return c.JSON(http.StatusInternalServerError, "Internal Server Error")
 		}
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		http.Error(c.Response(), "Invalid credentials", http.StatusUnauthorized)
+		return c.JSON(http.StatusUnauthorized, "Invalid Credentials")
 	}
 
-	expirationTime := u.jwt.ExpiresAt
 	claims := &CustomClaims{
 		UserID:    user.ID,
 		Cellphone: user.Cellphone,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
+			ExpiresAt: u.JWT.ExpiresIn.Unix(),
 			Issuer:    "Aliagha",
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(u.jwt.SecretKey)
+	tokenString, err := token.SignedString(u.JWT.SecretKey)
 	if err != nil {
-		http.Error(c.Response(), "Token generation failed", http.StatusInternalServerError)
+		return c.JSON(http.StatusInternalServerError, "Internal Server Error")
 	}
 
-	response := LoginResponse{
-		Token:  tokenString,
-		UserID: user.ID,
-		Email:  user.Email,
-		Name:   user.Name,
-	}
-
-	c.Response().Header().Set("Content-Type", "application/json")
-	json.NewEncoder(c.Response()).Encode(response)
-	return nil
+	return c.JSON(http.StatusOK, LoginResponse{
+		Token: tokenString,
+	})
 }
