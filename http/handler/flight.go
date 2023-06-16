@@ -20,17 +20,21 @@ type Flight struct {
 	// Airplane *models.Airplane
 }
 type FlightRequest struct {
-	ID     int    'json:"flight_id"'
-	origin string 'json:"flight_org"'
-	dest   string 'json:"flight_dest"'
-	date   string 'json:"flight_date"'
+	// ID     int    'json:"flight_id"'
+	// origin string 'json:"flight_org"'
+	// dest   string 'json:"flight_dest"'
+	// date   string 'json:"flight_date"'
+	ID     int
+	origin string
+	dest   string
+	date   string
 }
 
 func (f *Flight) GetFlightsHandler(c echo.Context) error {
 	origin := c.QueryParam("origin")
 	dest := c.QueryParam("destination")
 	dateStr := c.QueryParam("date")
-	date, err := time.Parse("2006-01-02", dateStr)
+	_, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid date format"})
 	}
@@ -39,7 +43,7 @@ func (f *Flight) GetFlightsHandler(c echo.Context) error {
 	cacheResult, err := f.Redis.Get(cacheKey).Result()
 	if err == redis.Nil {
 		// Cache miss, get data from API
-		apiResult, err := f.getFlightsFromAPI(origin, dest, date)
+		apiResult, err := f.getFlightsFromAPI(c)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get flights from API"})
 		}
@@ -49,7 +53,7 @@ func (f *Flight) GetFlightsHandler(c echo.Context) error {
 		aircraftType := c.QueryParam("aircraft_type")
 		depTimeStr := c.QueryParam("dep_time")
 
-		var filteredFlights []f.Flight
+		var filteredFlights []models.Flight
 		for _, flight := range apiResult {
 			if airline != "" && flight.Airplane.Airline != airline {
 				continue
@@ -126,7 +130,7 @@ func (f *Flight) GetFlightsHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get result from cache"})
 	}
 
-	var flights []f.Flight
+	var flights []models.Flight
 	err = json.Unmarshal([]byte(cacheResult), &flights)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to unmarshal cache result"})
@@ -134,15 +138,19 @@ func (f *Flight) GetFlightsHandler(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, flights)
 }
-func (f *Flight) getFlightsFromAPI(origin, dest string, date time.Time) ([]Flight, error) {
-	var req FlightRequest
+func (f *Flight) getFlightsFromAPI(c echo.Context) ([]models.Flight, error) {
+	var freq FlightRequest
 	origin := c.QueryParam("origin")
 	dest := c.QueryParam("destination")
 	dateStr := c.QueryParam("date")
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, "")
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return nil, c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid date format"})
 	}
-	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?origin=%s&destination=%s&date=%s", origin, dest, date.Format("2006-01-02"))
+	if err := c.Bind(&freq); err != nil {
+		return nil, c.JSON(http.StatusBadRequest, "")
+	}
+	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?origin=%s&destination=%s&date=%s", origin, dest, date)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -161,7 +169,7 @@ func (f *Flight) getFlightsFromAPI(origin, dest string, date time.Time) ([]Fligh
 	}
 	defer resp.Body.Close()
 
-	var apiResult []f.Flight
+	var apiResult []models.Flight
 	err = json.NewDecoder(resp.Body).Decode(&apiResult)
 	if err != nil {
 		return nil, err
@@ -169,13 +177,13 @@ func (f *Flight) getFlightsFromAPI(origin, dest string, date time.Time) ([]Fligh
 
 	return apiResult, nil
 }
-func (f *Flight) getFlightFromAPI(c echo.Context) (Flight.Flight, error) {
+func (f *Flight) getFlightFromAPI(c echo.Context) ([]models.Flight, error) {
 	id := c.QueryParam("id")
 	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API/%s", id)
-
+	var FlightModule []models.Flight
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return f.Flight{}, err
+		return FlightModule, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -186,14 +194,14 @@ func (f *Flight) getFlightFromAPI(c echo.Context) (Flight.Flight, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return f.Flight{}, err
+		return FlightModule, err
 	}
 	defer resp.Body.Close()
 
-	var apiResult f.Flight
+	var apiResult []models.Flight
 	err = json.NewDecoder(resp.Body).Decode(&apiResult)
 	if err != nil {
-		return f.Flight{}, err
+		return FlightModule, err
 	}
 
 	return apiResult, nil
