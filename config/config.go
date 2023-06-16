@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -13,21 +14,25 @@ type Config struct {
 	PaymentGateway PaymentGateway
 	MockAPI        MockAPI
 	Security       Security
+	JWT            JWT
 }
+
 type Redis struct {
 	Host     string
 	Port     int
 	Password string
 }
+
 type Database struct {
 	Driver   string
 	Host     string
 	Port     int
-	Name     string
+	DB       string
 	Username string
 	Password string
 	Charset  string
 }
+
 type Server struct {
 	Address string
 	Port    int
@@ -55,7 +60,11 @@ type Params struct {
 	FileType string
 }
 
-// Load all  uration values from YAML file
+type JWT struct {
+	SecretKey string
+	ExpiresIn time.Time
+}
+
 func Init(param Params) (*Config, error) {
 	viper.SetConfigType(param.FileType)
 	viper.AddConfigPath(param.FilePath)
@@ -77,7 +86,7 @@ func Init(param Params) (*Config, error) {
 		Username: viper.GetString("database.username"),
 		Password: viper.GetString("database.password"),
 		Charset:  viper.GetString("database.chaset"),
-		Name:     viper.GetString("database.name"),
+		DB:       viper.GetString("database.db"),
 	}
 	server := &Server{
 		Address: viper.GetString("server.address"),
@@ -100,6 +109,17 @@ func Init(param Params) (*Config, error) {
 		SecretKey:           viper.GetString("security.secret_key"),
 		EncryptionAlgorithm: viper.GetString("security.encryption_algorithm"),
 	}
+
+	expiresIn, err := time.Parse(time.RFC3339, viper.GetString("jwt.expires_in"))
+	if err != nil {
+		panic(err)
+	}
+
+	jwt := &JWT{
+		SecretKey: viper.GetString("jwt.secret_key"),
+		ExpiresIn: expiresIn,
+	}
+
 	return &Config{
 		Redis:          *redis,
 		Database:       *database,
@@ -107,5 +127,6 @@ func Init(param Params) (*Config, error) {
 		PaymentGateway: *paymentGateway,
 		MockAPI:        *mockAPI,
 		Security:       *security,
+		JWT:            *jwt,
 	}, nil
 }
