@@ -27,7 +27,7 @@ type Database struct {
 	Driver   string
 	Host     string
 	Port     int
-	Name     string
+	DB       string
 	Username string
 	Password string
 	Charset  string
@@ -86,7 +86,7 @@ func Init(param Params) (*Config, error) {
 		Username: viper.GetString("database.username"),
 		Password: viper.GetString("database.password"),
 		Charset:  viper.GetString("database.chaset"),
-		Name:     viper.GetString("database.name"),
+		DB:       viper.GetString("database.db"),
 	}
 	server := &Server{
 		Address: viper.GetString("server.address"),
