@@ -19,6 +19,12 @@ type Flight struct {
 	Flight *models.Flight
 	// Airplane *models.Airplane
 }
+type FlightRequest struct {
+	ID     int    'json:"flight_id"'
+	origin string 'json:"flight_org"'
+	dest   string 'json:"flight_dest"'
+	date   string 'json:"flight_date"'
+}
 
 func (f *Flight) GetFlightsHandler(c echo.Context) error {
 	origin := c.QueryParam("origin")
@@ -129,6 +135,13 @@ func (f *Flight) GetFlightsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, flights)
 }
 func (f *Flight) getFlightsFromAPI(origin, dest string, date time.Time) ([]Flight, error) {
+	var req FlightRequest
+	origin := c.QueryParam("origin")
+	dest := c.QueryParam("destination")
+	dateStr := c.QueryParam("date")
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, "")
+	}
 	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?origin=%s&destination=%s&date=%s", origin, dest, date.Format("2006-01-02"))
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -156,7 +169,8 @@ func (f *Flight) getFlightsFromAPI(origin, dest string, date time.Time) ([]Fligh
 
 	return apiResult, nil
 }
-func (f *Flight) getFlightFromAPI(id string) (Flight.Flight, error) {
+func (f *Flight) getFlightFromAPI(c echo.Context) (Flight.Flight, error) {
+	id := c.QueryParam("id")
 	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API/%s", id)
 
 	req, err := http.NewRequest("GET", url, nil)
