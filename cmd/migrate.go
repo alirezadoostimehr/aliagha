@@ -43,7 +43,7 @@ It is recommended to run this command before starting the application to ensure 
 		if action != "up" && action != "down" {
 			panic(errors.New("invalid action"))
 		}
-		
+
 		migrateDB()
 	},
 }
@@ -68,7 +68,7 @@ func migrateDB() {
 	password := cfg.Database.Password
 	host := cfg.Database.Host
 	port := strconv.Itoa(cfg.Database.Port)
-	dbname := cfg.Database.Name
+	dbname := cfg.Database.DB
 
 	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:%s)/",
 		username, password, host, port)

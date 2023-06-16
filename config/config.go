@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -14,11 +15,13 @@ type Config struct {
 	MockAPI        MockAPI
 	Security       Security
 }
+
 type Redis struct {
 	Host     string
 	Port     int
 	Password string
 }
+
 type Database struct {
 	Driver   string
 	Host     string
@@ -28,6 +31,7 @@ type Database struct {
 	Password string
 	Charset  string
 }
+
 type Server struct {
 	Address string
 	Port    int
@@ -53,6 +57,11 @@ type Params struct {
 	FilePath string
 	FileName string
 	FileType string
+}
+
+type Jwt struct {
+	SecretKey string
+	ExpiresAt time.Time
 }
 
 // Load all  uration values from YAML file
@@ -100,6 +109,17 @@ func Init(param Params) (*Config, error) {
 		SecretKey:           viper.GetString("security.secret_key"),
 		EncryptionAlgorithm: viper.GetString("security.encryption_algorithm"),
 	}
+
+	expiresIn := viper.GetString("jwt.expires_at")
+	expiresAt, err := time.Parse(time.RFC3339, expiresIn)
+	if err != nil {
+		panic(err)
+	}
+	jwt := &Jwt{
+		SecretKey: viper.GetString("jwt.secret_key"),
+		ExpiresAt: expiresAt,
+	}
+
 	return &Config{
 		Redis:          *redis,
 		Database:       *database,
@@ -107,5 +127,6 @@ func Init(param Params) (*Config, error) {
 		PaymentGateway: *paymentGateway,
 		MockAPI:        *mockAPI,
 		Security:       *security,
+		Jwt:            *jwt,
 	}, nil
 }

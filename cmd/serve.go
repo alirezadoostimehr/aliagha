@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"aliagha/config"
-	"aliagha/database"
+	"aliagha/databases"
 	"aliagha/http/handler"
 
 	"github.com/labstack/echo/v4"
@@ -40,12 +40,17 @@ func init() {
 
 func startServer() {
 	//todo: get config path as a flag
-	cfg, err := config.Init(config.Params{FilePath: "config.yaml", FileType: "yaml"})
+	cfg, err := config.Init("config.yaml")
 	if err != nil {
 		panic(err)
 	}
 
-	redis, err := database.InitRedis(cfg)
+	redis, err := databases.InitRedis(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	database, err := databases.InitDB(cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -54,6 +59,8 @@ func startServer() {
 
 	flight := handler.Flight{Redis: redis}
 	e.GET("/flight", flight.Get)
+
+	user := handler.User{DB: database}
 
 	e.Start("localhost:3030")
 }

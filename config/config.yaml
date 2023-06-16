@@ -30,3 +30,7 @@ mock_api:
 security:
   secret_key: mysecretkey
   encryption_algorithm: AES-256  
+# Jwt-based authentication configuration
+jwt:
+  secret_key: mysecretkey
+  expires_in: 24 * time.Hour
