@@ -7,11 +7,11 @@ import (
 	"github.com/go-redis/redis"
 )
 
-func InitRedis(cfg *config.Config) (*redis.Client, error) {
+func InitRedis(redisConfig *config.Redis) (*redis.Client, error) {
 	// Connect to Redis
 	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
-		Password: cfg.Redis.Password,
+		Addr:     fmt.Sprintf("%s:%d", redisConfig.Host, redisConfig.Port),
+		Password: redisConfig.Password,
 		DB:       0, // use default database
 	})
 

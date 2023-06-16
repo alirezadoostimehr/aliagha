@@ -8,7 +8,7 @@ database:
   driver: mysql
   host: "127.0.0.1"
   port: 3306
-  name: aliagha
+  db: aliagha
   username: root
   password: root
   charset: "utf8mb4"
@@ -30,3 +30,7 @@ mock_api:
 security:
   secret_key: mysecretkey
   encryption_algorithm: AES-256  
+# Jwt-based authentication configuration
+jwt:
+  secret_key: mysecretkey
+  expires_in: 24 * time.Hour
