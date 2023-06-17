@@ -10,18 +10,20 @@ import (
 
 	"fmt"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/go-redis/redis"
 	"github.com/labstack/echo/v4"
 )
 
 type Flight struct {
-	Redis *redis.Client
+	Redis     *redis.Client
+	Validator *validator.Validate
 }
 
 type GetFlightRequest struct { // Add validation and params
 	ID            int
-	DepartureCity string `json:"departure_city"`
-	ArrivalCity   string `json:"arrival_city"`
+	DepartureCity string `json:"departure_city" validate:"departure_city"`
+	ArrivalCity   string `json:"arrival_city" validate:"arrival_city"`
 	date          string
 }
 
@@ -44,18 +46,24 @@ func (f *Flight) GetFlightsHandler(c echo.Context) error {
 		}
 
 		// Get filter parameters from query params
-		//airline := c.QueryParam("airline")
-		//aircraftType := c.QueryParam("aircraft_type")
+		// airline := c.QueryParam("airline")
+		// aircraftType := c.QueryParam("aircraft_type")
 		depTimeStr := c.QueryParam("dep_time")
 
 		var filteredFlights []models.Flight
+		// var airplanes []models.Airplane
 		for _, flight := range apiResult {
-			//if airline != "" && flight.Airline != airline {
-			//	continue
-			//}
-			//if aircraftType != "" && flight.Airplane.Name != aircraftType {
-			//	continue
-			//}
+			// if flight.AirplaneID == airplane.ID {
+			// 	if airline != "" && airplane.Airline != airline {
+			// 		continue
+			// 	}
+			// 	if aircraftType != "" && airplane.Type != aircraftType {
+			// 		continue
+			// 	}
+			// } else {
+			// 	continue
+			// }
+
 			if depTimeStr != "" {
 				depTime, err := time.Parse("15:04", depTimeStr)
 				if err != nil {
@@ -145,6 +153,9 @@ func (f *Flight) getFlightsFromAPI(c echo.Context) ([]models.Flight, error) {
 	if err := c.Bind(&freq); err != nil {
 		return nil, c.JSON(http.StatusBadRequest, "")
 	}
+	if err := f.Validator.Struct(&freq); err != nil {
+		return nil, c.JSON(http.StatusBadRequest, err.Error())
+	}
 	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?origin=%s&destination=%s&date=%s", origin, dest, date)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -180,7 +191,9 @@ func (f *Flight) getFlightFromAPI(c echo.Context) ([]models.Flight, error) {
 	if err != nil {
 		return FlightModule, err
 	}
-
+	if err := f.Validator.Struct(&req); err != nil {
+		return nil, c.JSON(http.StatusBadRequest, err.Error())
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
