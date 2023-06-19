@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS flight (
     dep_time datetime NOT NULL ,
     arr_time datetime NOT NULL ,
     airplane_id int NOT NULL ,
+    airline varchar(255) NOT NULL ,
     price int NOT NULL ,
     cxl_sit_id int NOT NULL ,
     created_at datetime DEFAULT NOW() ,
