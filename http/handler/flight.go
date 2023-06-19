@@ -27,7 +27,7 @@ type GetFlightRequest struct { // Add validation and params
 	date          string
 }
 
-func (f *Flight) GetFlightsHandler(c echo.Context) error {
+func (f *Flight) Get(c echo.Context) error {
 	origin := c.QueryParam("origin")
 	dest := c.QueryParam("destination")
 	dateStr := c.QueryParam("date")
@@ -46,21 +46,21 @@ func (f *Flight) GetFlightsHandler(c echo.Context) error {
 		}
 
 		// Get filter parameters from query params
-		// airline := c.QueryParam("airline")
+		airline := c.QueryParam("airline")
 		// aircraftType := c.QueryParam("aircraft_type")
 		depTimeStr := c.QueryParam("dep_time")
 
 		var filteredFlights []models.Flight
-		// var airplanes []models.Airplane
+		var a *Airline
 		for _, flight := range apiResult {
-			// if flight.AirplaneID == airplane.ID {
-			// 	if airline != "" && airplane.Airline != airline {
-			// 		continue
-			// 	}
-			// 	if aircraftType != "" && airplane.Type != aircraftType {
-			// 		continue
-			// 	}
-			// } else {
+			airlineName, err := a.Reard(flight.AirlineID)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid airline ID"})
+			}
+			if airline != "" && airlineName != airline {
+				continue
+			}
+			// if aircraftType != "" && airplane.Type != aircraftType {
 			// 	continue
 			// }
 

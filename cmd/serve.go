@@ -4,6 +4,7 @@ import (
 	"aliagha/config"
 	"aliagha/database"
 	"aliagha/http/handler"
+
 	"github.com/go-playground/validator/v10"
 
 	"github.com/labstack/echo/v4"
@@ -56,7 +57,7 @@ func startServer() {
 	e := echo.New()
 
 	flight := handler.Flight{Redis: redis}
-	e.GET("/flights", flight.GetFlightsHandler)
+	e.GET("/flights", flight.Get)
 
 	user := handler.User{DB: db, JWT: &cfg.JWT, Validator: vldt}
 	e.POST("/user/login", user.Login)
