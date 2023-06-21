@@ -2,13 +2,13 @@ package handler
 
 import (
 	"aliagha/models"
+
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 	"time"
-
-	"fmt"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/go-redis/redis"
@@ -20,143 +20,96 @@ type Flight struct {
 	Validator *validator.Validate
 }
 
-type GetFlightRequest struct { // Add validation and params
+type GetFlightRequest struct {
 	ID            int
-	DepartureCity string `json:"departure_city" validate:"departure_city"`
-	ArrivalCity   string `json:"arrival_city" validate:"arrival_city"`
-	date          string
+	DepartureCity string `json:"departure_city" validate:"required"`
+	ArrivalCity   string `json:"arrival_city" validate:"required"`
+	Date          string `json:"date" validate:"required,date"`
+	Airline       string
+	Name          string
+	DepTimeStr    string /*`validate:"time"`*/
+	SortBy        string
+	SortOrder     string
 }
 
 func (f *Flight) Get(c echo.Context) error {
-	origin := c.QueryParam("origin")
-	dest := c.QueryParam("destination")
-	dateStr := c.QueryParam("date")
-	_, err := time.Parse("2006-01-02", dateStr)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid date format"})
+	TTL := 1 * time.Minute
+	var freq GetFlightRequest
+	if err := c.Bind(&freq); err != nil {
+		return c.JSON(http.StatusBadRequest, "")
+	}
+	if err := f.Validator.Struct(&freq); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	cacheKey := fmt.Sprintf("%s-%s-%s", origin, dest, dateStr)
+	cacheKey := fmt.Sprintf("%s-%s-%s", freq.DepartureCity, freq.ArrivalCity, freq.Date)
 	cacheResult, err := f.Redis.Get(cacheKey).Result()
-	if err == redis.Nil {
+	var apiResult []models.Flight
+	if err != nil && err != redis.Nil {
+		// Error reading from cache
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get result from cache"})
+	} else if err == redis.Nil {
 		// Cache miss, get data from API
-		apiResult, err := f.getFlightsFromAPI(c)
+		apiResult, err = f.getFlightsFromAPI(freq.DepartureCity, freq.ArrivalCity, freq.Date)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get flights from API"})
 		}
-
-		// Get filter parameters from query params
-		airline := c.QueryParam("airline")
-		// aircraftType := c.QueryParam("aircraft_type")
-		depTimeStr := c.QueryParam("dep_time")
-
-		var filteredFlights []models.Flight
-		var a *Airline
-		for _, flight := range apiResult {
-			airlineName, err := a.Reard(flight.AirlineID)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid airline ID"})
-			}
-			if airline != "" && airlineName != airline {
-				continue
-			}
-			// if aircraftType != "" && airplane.Type != aircraftType {
-			// 	continue
-			// }
-
-			if depTimeStr != "" {
-				depTime, err := time.Parse("15:04", depTimeStr)
-				if err != nil {
-					return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid departure time format"})
-				}
-				if flight.DepTime.Hour() != depTime.Hour() || flight.DepTime.Minute() != depTime.Minute() {
-					continue
-				}
-			}
-			filteredFlights = append(filteredFlights, flight)
-		}
-
-		// Sort results based on query params
-		sortBy := c.QueryParam("sort_by")
-		if sortBy != "" {
-			sortOrder := c.QueryParam("sort_order")
-			if sortOrder == "" {
-				sortOrder = "asc"
-			}
-			switch sortBy {
-			case "price":
-				if sortOrder == "asc" {
-					sort.Slice(filteredFlights, func(i, j int) bool {
-						return filteredFlights[i].Price < filteredFlights[j].Price
-					})
-				} else {
-					sort.Slice(filteredFlights, func(i, j int) bool {
-						return filteredFlights[i].Price > filteredFlights[j].Price
-					})
-				}
-			case "dep_time":
-				if sortOrder == "asc" {
-					sort.Slice(filteredFlights, func(i, j int) bool {
-						return filteredFlights[i].DepTime.Before(filteredFlights[j].DepTime)
-					})
-				} else {
-					sort.Slice(filteredFlights, func(i, j int) bool {
-						return filteredFlights[i].DepTime.After(filteredFlights[j].DepTime)
-					})
-				}
-			case "duration":
-				if sortOrder == "asc" {
-					sort.Slice(filteredFlights, func(i, j int) bool {
-						return filteredFlights[i].ArrTime.Sub(filteredFlights[i].DepTime) < filteredFlights[j].ArrTime.Sub(filteredFlights[j].DepTime)
-					})
-				} else {
-					sort.Slice(filteredFlights, func(i, j int) bool {
-						return filteredFlights[i].ArrTime.Sub(filteredFlights[i].DepTime) > filteredFlights[j].ArrTime.Sub(filteredFlights[j].DepTime)
-					})
-				}
-			default:
-				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid sort_by parameter"})
-			}
-		}
-
 		// Store result in cache
-		jsonData, err := json.Marshal(filteredFlights)
+		jsonData, err := json.Marshal(apiResult)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to marshal API result"})
 		}
-		err = f.Redis.Set(cacheKey, jsonData, 1*time.Minute).Err()
+		err = f.Redis.Set(cacheKey, jsonData, TTL).Err()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to store result in cache"})
 		}
-		cacheResult = string(jsonData)
-	} else if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get result from cache"})
 	}
+
+	// Filter
+	var filteredFlights []models.Flight
+	if err != nil {
+		c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid airline ID"})
+	}
+	if freq.Airline != "" {
+		filteredFlights = append(filteredFlights, filterAirline(apiResult, freq.Airline)...)
+	}
+	if freq.Name != "" {
+		filteredFlights = append(filteredFlights, filterName(apiResult, freq.Name)...)
+	}
+	if freq.DepTimeStr != "" {
+		depTime, err := time.Parse("15:04", freq.DepTimeStr)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid departure time format"})
+		}
+		filteredFlights = append(filteredFlights, filterDeptime(apiResult, depTime)...)
+	}
+
+	// Sort
+	if freq.SortBy != "" {
+		flights, err := sortFlight(apiResult, freq.SortBy, freq.SortOrder)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid sort argument"})
+		}
+		filteredFlights = append(filteredFlights, flights...)
+	}
+
+	// Return filtered results
+	jsonData, err := json.Marshal(filteredFlights)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to marshal API result"})
+	}
+	cacheResult = string(jsonData)
 
 	var flights []models.Flight
 	err = json.Unmarshal([]byte(cacheResult), &flights)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to unmarshal cache result"})
 	}
-
 	return c.JSON(http.StatusOK, flights)
 }
-func (f *Flight) getFlightsFromAPI(c echo.Context) ([]models.Flight, error) {
-	var freq GetFlightRequest
-	origin := c.QueryParam("origin")
-	dest := c.QueryParam("destination")
-	dateStr := c.QueryParam("date")
-	date, err := time.Parse("2006-01-02", dateStr)
-	if err != nil {
-		return nil, c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid date format"})
-	}
-	if err := c.Bind(&freq); err != nil {
-		return nil, c.JSON(http.StatusBadRequest, "")
-	}
-	if err := f.Validator.Struct(&freq); err != nil {
-		return nil, c.JSON(http.StatusBadRequest, err.Error())
-	}
-	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?origin=%s&destination=%s&date=%s", origin, dest, date)
+func (f *Flight) getFlightsFromAPI(depCity, arrCity, date string) ([]models.Flight, error) {
+
+	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?DepartureCity=%s&ArrivalCity=%s&Date=%s", depCity, arrCity, date)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -213,4 +166,71 @@ func (f *Flight) getFlightFromAPI(c echo.Context) ([]models.Flight, error) {
 	}
 
 	return apiResult, nil
+}
+func sortFlight(flights []models.Flight, sortBy, sortOrder string) ([]models.Flight, error) {
+	if sortBy == "" {
+		sortOrder = "asc"
+	}
+	switch sortBy {
+	case "price":
+		if sortOrder == "asc" {
+			sort.Slice(flights, func(i, j int) bool {
+				return flights[i].Price < flights[j].Price
+			})
+		} else {
+			sort.Slice(flights, func(i, j int) bool {
+				return flights[i].Price > flights[j].Price
+			})
+		}
+	case "dep_time":
+		if sortOrder == "asc" {
+			sort.Slice(flights, func(i, j int) bool {
+				return flights[i].DepTime.Before(flights[j].DepTime)
+			})
+		} else {
+			sort.Slice(flights, func(i, j int) bool {
+				return flights[i].DepTime.After(flights[j].DepTime)
+			})
+		}
+	case "duration":
+		if sortOrder == "asc" {
+			sort.Slice(flights, func(i, j int) bool {
+				return flights[i].ArrTime.Sub(flights[i].DepTime) < flights[j].ArrTime.Sub(flights[j].DepTime)
+			})
+		} else {
+			sort.Slice(flights, func(i, j int) bool {
+				return flights[i].ArrTime.Sub(flights[i].DepTime) > flights[j].ArrTime.Sub(flights[j].DepTime)
+			})
+		}
+	default:
+		return nil, fmt.Errorf("Invalid sort_by parameter")
+	}
+	return flights, nil
+}
+func filterAirline(flights []models.Flight, filter string) []models.Flight {
+	var filteredFlights []models.Flight
+	for _, flight := range flights {
+		if flight.Airline == filter {
+			filteredFlights = append(filteredFlights, flight)
+		}
+	}
+	return filteredFlights
+}
+func filterName(flights []models.Flight, filter string) []models.Flight {
+	var filteredFlights []models.Flight
+	for _, flight := range flights {
+		if flight.Airplane.Name == filter {
+			filteredFlights = append(filteredFlights, flight)
+		}
+	}
+	return filteredFlights
+}
+func filterDeptime(flights []models.Flight, filter time.Time) []models.Flight {
+	var filteredFlights []models.Flight
+	for _, flight := range flights {
+		if flight.DepTime.Hour() == filter.Hour() || flight.DepTime.Minute() == filter.Minute() {
+			filteredFlights = append(filteredFlights, flight)
+		}
+	}
+	return filteredFlights
 }
