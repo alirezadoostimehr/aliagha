@@ -21,6 +21,7 @@ type Redis struct {
 	Host     string
 	Port     int
 	Password string
+	TTL      time.Duration
 }
 
 type Database struct {
@@ -74,10 +75,15 @@ func Init(param Params) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %s", err)
 	}
+	TTL, err := time.ParseDuration(viper.GetString("redis.TTL"))
+	if err != nil {
+		panic(err)
+	}
 	redis := &Redis{
 		Host:     viper.GetString("redis.host"),
 		Port:     viper.GetInt("redis.port"),
 		Password: viper.GetString("redis.password"),
+		TTL:      TTL,
 	}
 	database := &Database{
 		Driver:   viper.GetString("database.driver"),

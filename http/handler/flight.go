@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"aliagha/config"
 	"aliagha/models"
 
 	"context"
@@ -18,6 +19,7 @@ import (
 type Flight struct {
 	Redis     *redis.Client
 	Validator *validator.Validate
+	Config    *config.Config
 }
 
 type GetFlightRequest struct {
@@ -33,7 +35,7 @@ type GetFlightRequest struct {
 }
 
 func (f *Flight) Get(c echo.Context) error {
-	TTL := 1 * time.Minute
+	TTL := f.Config.Redis.TTL
 	var freq GetFlightRequest
 	if err := c.Bind(&freq); err != nil {
 		return c.JSON(http.StatusBadRequest, "")

@@ -3,6 +3,7 @@ redis:
   host: localhost
   port: 6379
   password: dbpassword
+  TTL: 1 * time.Minute 
 # database configuration
 database:  
   driver: mysql
