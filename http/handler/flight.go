@@ -34,6 +34,8 @@ type GetFlightRequest struct {
 	SortOrder     string
 }
 
+var timeout = 10 * time.Second
+
 func (f *Flight) Get(c echo.Context) error {
 	TTL := f.Config.Redis.TTL
 	var freq GetFlightRequest
@@ -52,7 +54,7 @@ func (f *Flight) Get(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get result from cache"})
 	} else if err == redis.Nil {
 		// Cache miss, get data from API
-		apiResult, err = f.getFlightsFromAPI(freq.DepartureCity, freq.ArrivalCity, freq.Date)
+		apiResult, err = getFlightsFromAPI(freq.DepartureCity, freq.ArrivalCity, freq.Date)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get flights from API"})
 		}
@@ -109,7 +111,8 @@ func (f *Flight) Get(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, flights)
 }
-func (f *Flight) getFlightsFromAPI(depCity, arrCity, date string) ([]models.Flight, error) {
+
+func getFlightsFromAPI(depCity, arrCity, date string) ([]models.Flight, error) {
 
 	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?DepartureCity=%s&ArrivalCity=%s&Date=%s", depCity, arrCity, date)
 
@@ -118,7 +121,7 @@ func (f *Flight) getFlightsFromAPI(depCity, arrCity, date string) ([]models.Flig
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	req = req.WithContext(ctx)
@@ -138,18 +141,15 @@ func (f *Flight) getFlightsFromAPI(depCity, arrCity, date string) ([]models.Flig
 
 	return apiResult, nil
 }
-func (f *Flight) getFlightFromAPI(c echo.Context) ([]models.Flight, error) {
+func getFlightFromAPI(c echo.Context) (models.Flight, error) {
 	id := c.QueryParam("id")
 	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API/%s", id)
-	var FlightModule []models.Flight
+	var FlightModule models.Flight
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return FlightModule, err
 	}
-	if err := f.Validator.Struct(&req); err != nil {
-		return nil, c.JSON(http.StatusBadRequest, err.Error())
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	req = req.WithContext(ctx)
@@ -161,7 +161,7 @@ func (f *Flight) getFlightFromAPI(c echo.Context) ([]models.Flight, error) {
 	}
 	defer resp.Body.Close()
 
-	var apiResult []models.Flight
+	var apiResult models.Flight
 	err = json.NewDecoder(resp.Body).Decode(&apiResult)
 	if err != nil {
 		return FlightModule, err
@@ -221,7 +221,7 @@ func filterAirline(flights []models.Flight, filter string) []models.Flight {
 func filterName(flights []models.Flight, filter string) []models.Flight {
 	var filteredFlights []models.Flight
 	for _, flight := range flights {
-		if flight.Airplane.Name == filter {
+		if flight.Name == filter {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}
@@ -230,7 +230,7 @@ func filterName(flights []models.Flight, filter string) []models.Flight {
 func filterDeptime(flights []models.Flight, filter time.Time) []models.Flight {
 	var filteredFlights []models.Flight
 	for _, flight := range flights {
-		if flight.DepTime.Hour() == filter.Hour() || flight.DepTime.Minute() == filter.Minute() {
+		if flight.DepTime.Hour() == filter.Hour() && flight.DepTime.Minute() == filter.Minute() {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}
