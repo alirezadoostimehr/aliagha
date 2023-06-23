@@ -1,5 +1,6 @@
-# Cobra
+# Cobra-Cli
 
+This package is a powerful library for building command-line applications in Go. It provides a simple and elegant way to define commands, flags, and arguments, making it easy to create robust CLI tools. This documentation will guide you through the initialization, usage, and notable features of the Cobra package in your project.
 
 ## Initialization
 1. Open your terminal or command prompt.
