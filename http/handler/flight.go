@@ -119,7 +119,7 @@ func (f *Flight) Get(c echo.Context) error {
 
 func getFlightsFromAPI(depCity, arrCity, date string) ([]models.Flight, error) {
 
-	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?DepartureCity=%s&ArrivalCity=%s&Date=%s", depCity, arrCity, date)
+	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?departure_city=%s&arrival_city=%s&date=%s", depCity, arrCity, date)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

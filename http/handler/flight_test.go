@@ -27,7 +27,7 @@ func TestGetFlights(t *testing.T) {
 	}
 
 	// Create a new HTTP request
-	req := httptest.NewRequest(http.MethodGet, "/flights?origin=CityA&destination=CityB&date=2023-06-17", nil)
+	req := httptest.NewRequest(http.MethodGet, "/flights?departure_city=CityA&arrival_city=CityB&date=2023-06-17", nil)
 
 	// Create a new HTTP response recorder
 	rec := httptest.NewRecorder()
