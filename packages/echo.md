@@ -6,11 +6,11 @@ The echo v4 package is a high-performance, extensible web framework for Go. It p
 To install the Echo v4 package in your Go project, you can use the go get command. Here's how you can install it:
 
 1. Open your terminal or command prompt.
-
-2. Run the following command to install the Echo v4 package:
+2. Navigate to your project's directory.
+3. Run the following command to install the Echo v4 package:
 ```go get github.com/labstack/echo/v4
 ```
-3. This command fetches the package and its dependencies from the GitHub repository and installs them in your project's vendor directory.
+4. This command fetches the package and its dependencies from the GitHub repository and installs them in your project's vendor directory.
 To initialize the Echo v4 package, you need to import the necessary packages and create an instance of the echo.Echo struct. Here's an example of how to initialize Echo:
 ```import (
 	"github.com/labstack/echo/v4"

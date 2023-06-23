@@ -4,10 +4,11 @@ This package is a powerful library for building command-line applications in Go.
 
 ## Initialization
 1. Open your terminal or command prompt.
-2. Run the following command to install SPF13 Cobra-CLI: ` go get -u github.com/spf13/cobra/cobra `.
+2. Navigate to your project's directory.
+3. Run the following command to install SPF13 Cobra-CLI: ` go get -u github.com/spf13/cobra/cobra `.
 
-3. Wait for the installation process to complete. It will download and install the necessary files.
-4. import the necessary packages and create a root command using the cobra.Command struct. Here's an example of how to initialize Cobra:
+4. Wait for the installation process to complete. It will download and install the necessary files.
+5. import the necessary packages and create a root command using the cobra.Command struct. Here's an example of how to initialize Cobra:
 ```import (
 	"github.com/spf13/cobra"
 )

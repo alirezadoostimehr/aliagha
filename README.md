@@ -8,7 +8,7 @@ Biggest competitor of alibaba.ir! (Quera bootcamp final project)
  * Packages
  	* [cobra](https://github.com/alirezadoostimehr/aliagha/blob/init-document/packages/cobra.md)
  	* [viper](https://github.com/alirezadoostimehr/aliagha/blob/init-document/packages/viper.md)
- 	* [echo]
- 	* [validator v10]
- 	* [migrate]
- 	* [jwt-go]
+ 	* [echo](https://github.com/alirezadoostimehr/aliagha/blob/init-document/packages/echo.md)
+ 	* [validator v10](https://github.com/alirezadoostimehr/aliagha/blob/init-document/packages/validator.md)
+ 	* [migrate](https://github.com/alirezadoostimehr/aliagha/blob/init-document/packages/migrate.md)
+ 	* [jwt-go](https://github.com/alirezadoostimehr/aliagha/blob/init-document/packages/jwtgo.md)
