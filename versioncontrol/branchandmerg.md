@@ -41,6 +41,6 @@ Once a release branch is ready, it is merged back into the master branch, and a 
 7. Conflict Resolution:
 In case of conflicts during merging, developers work collaboratively to resolve them.
 Regular communication and collaboration are encouraged to minimize conflicts and keep the mainline branch stable.
-Conclusion:
+##### Conclusion:
 Trunk-Based Development, supported by Git, enables our team to achieve frequent integration, maintain a stable mainline branch, and deliver features more efficiently. By utilizing short-lived feature branches, continuous integration, and collaborative code review, we enhance code quality, reduce integration risks, and streamline our development process.
 
