@@ -1,16 +1,16 @@
 
-CREATE TABLE IF NOT EXISTS user
+CREATE TABLE IF NOT EXISTS users
 (
     id int PRIMARY KEY AUTO_INCREMENT ,
     name varchar(255) NOT NULL ,
     password varchar(255) NOT NULL ,
     mobile varchar(16) NOT NULL ,
-    email varchar(255) NOT NULL ,
+    email varchar(255) NOT NULL UNIQUE ,
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW()
-);
+    );
 
-CREATE TABLE IF NOT EXISTS passenger (
+CREATE TABLE IF NOT EXISTS passengers (
     id int PRIMARY KEY AUTO_INCREMENT ,
     u_id int NOT NULL,
     national_code int NOT NULL ,
@@ -19,33 +19,33 @@ CREATE TABLE IF NOT EXISTS passenger (
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW() ,
 
-    FOREIGN KEY (u_id) REFERENCES user(id) ,
+    FOREIGN KEY (u_id) REFERENCES users(id) ,
     UNIQUE (u_id, national_code)
-);
+    );
 
-CREATE TABLE IF NOT EXISTS city (
+CREATE TABLE IF NOT EXISTS cities (
     id int PRIMARY KEY AUTO_INCREMENT ,
     name varchar(255) UNIQUE NOT NULL ,
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW()
-);
+    );
 
-CREATE TABLE IF NOT EXISTS airplane (
+CREATE TABLE IF NOT EXISTS airplanes (
     id int PRIMARY KEY AUTO_INCREMENT ,
     name varchar(255) UNIQUE NOT NULL ,
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW()
-);
+    );
 
-CREATE TABLE IF NOT EXISTS canceling_situation (
+CREATE TABLE IF NOT EXISTS canceling_situations (
     id int PRIMARY KEY AUTO_INCREMENT ,
     description varchar(255) NOT NULL ,
     data varchar(255) NOT NULL ,
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW()
-);
+    );
 
-CREATE TABLE IF NOT EXISTS flight (
+CREATE TABLE IF NOT EXISTS flights (
     id int PRIMARY KEY AUTO_INCREMENT ,
     dep_city_id int NOT NULL ,
     arr_city_id int NOT NULL ,
@@ -58,13 +58,13 @@ CREATE TABLE IF NOT EXISTS flight (
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW() ,
 
-    FOREIGN KEY (dep_city_id) REFERENCES city(id) ,
-    FOREIGN KEY (arr_city_id) REFERENCES city(id) ,
-    FOREIGN KEY (airplane_id) REFERENCES airplane(id) ,
-    FOREIGN KEY (cxl_sit_id) REFERENCES canceling_situation(id)
-);
+    FOREIGN KEY (dep_city_id) REFERENCES cities(id) ,
+    FOREIGN KEY (arr_city_id) REFERENCES cities(id) ,
+    FOREIGN KEY (airplane_id) REFERENCES airplanes(id) ,
+    FOREIGN KEY (cxl_sit_id) REFERENCES canceling_situations(id)
+    );
 
-CREATE TABLE IF NOT EXISTS ticket (
+CREATE TABLE IF NOT EXISTS tickets (
     id int PRIMARY KEY AUTO_INCREMENT ,
     u_id int NOT NULL ,
     p_id int NOT NULL ,
@@ -73,12 +73,12 @@ CREATE TABLE IF NOT EXISTS ticket (
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW() ,
 
-    FOREIGN KEY (u_id) REFERENCES user(id) ,
-    FOREIGN KEY (p_id) REFERENCES passenger(id) ,
-    FOREIGN KEY (f_id) REFERENCES flight(id)
-);
+    FOREIGN KEY (u_id) REFERENCES users(id) ,
+    FOREIGN KEY (p_id) REFERENCES passengers(id) ,
+    FOREIGN KEY (f_id) REFERENCES flights(id)
+    );
 
-CREATE TABLE IF NOT EXISTS payment (
+CREATE TABLE IF NOT EXISTS payments (
     id int PRIMARY KEY AUTO_INCREMENT,
     u_id int NOT NULL ,
     type text NOT NULL ,
@@ -86,6 +86,6 @@ CREATE TABLE IF NOT EXISTS payment (
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW() ,
 
-    FOREIGN KEY (u_id) REFERENCES user(id) ,
-    FOREIGN KEY (ticket_id) REFERENCES ticket(id)
-);
+    FOREIGN KEY (u_id) REFERENCES users(id) ,
+    FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+    );
