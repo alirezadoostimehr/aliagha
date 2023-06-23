@@ -21,7 +21,35 @@ The `github.com/dgrijalva/jwt-go` package provides functionality for working wit
 Import the package in your Go file:
 import `"github.com/dgrijalva/jwt-go"`
 Use the package's functions, types, and constants to work with JWTs.
+You can now use the functions and types provided by the jwt-go package in your code.
 
+```package main
+import (
+    "fmt"
+    "github.com/dgrijalva/jwt-go"
+)
+
+func main() {
+    // Create a new token
+    token := jwt.New(jwt.SigningMethodHS256)
+
+    // Set claims
+    claims := token.Claims.(jwt.MapClaims)
+    claims["username"] = "john.doe"
+    claims["exp"] = jwt.TimeFunc().Add(time.Hour * 24).Unix()
+
+    // Generate the token string
+    tokenString, err := token.SignedString([]byte("secret-key"))
+    if err != nil {
+        fmt.Println("Error generating token:", err)
+        return
+    }
+
+    fmt.Println("Token:", tokenString)
+}
+```
+In the above example, we create a new JWT token, set some claims (including an expiration time), and generate the token string using a secret key.
+Make sure to replace "secret-key" with your own secret key in a real application.
 ## Features
 * The github.com/dgrijalva/jwt-go package offers the following features:
 
