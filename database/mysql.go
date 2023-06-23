@@ -9,7 +9,7 @@ import (
 )
 
 func InitDB(dbConfig *config.Database) (*gorm.DB, error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true",
 		dbConfig.Username, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.DB)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
