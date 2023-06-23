@@ -1,4 +1,4 @@
- * Database design
+ ## Database design
  	
  	* Database design process followed by our team for the project. It provides insights into how we understood the entities, tables, and structs in order to create an efficient and well-structured database.
  	* Understanding Entities
