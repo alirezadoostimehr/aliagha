@@ -175,7 +175,7 @@ func getFlightFromAPI(c echo.Context) (models.Flight, error) {
 	return apiResult, nil
 }
 func sortFlight(flights []models.Flight, sortBy, sortOrder string) ([]models.Flight, error) {
-	if sortBy == "" {
+	if sortOrder == "" {
 		sortOrder = "asc"
 	}
 	switch sortBy {
