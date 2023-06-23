@@ -56,7 +56,7 @@ func startServer() {
 
 	e := echo.New()
 
-	flight := handler.Flight{Redis: redis}
+	flight := handler.Flight{Redis: redis, Validator: vldt, Config: cfg}
 	e.GET("/flights", flight.Get)
 
 	user := handler.User{DB: db, JWT: &cfg.JWT, Validator: vldt}

@@ -22,39 +22,43 @@ type Flight struct {
 	Config    *config.Config
 }
 
-type GetFlightRequest struct {
-	ID            int
-	DepartureCity string `json:"departure_city" validate:"required"`
-	ArrivalCity   string `json:"arrival_city" validate:"required"`
-	Date          string `json:"date" validate:"required,date"`
-	Airline       string
-	Name          string
-	DepTimeStr    string /*`validate:"time"`*/
-	SortBy        string
-	SortOrder     string
+type GetRequest struct {
+	DepartureCity string `query:"departure_city" validate:"required"`
+	ArrivalCity   string `query:"arrival_city" validate:"required"`
+	Date          string `query:"date" validate:"required,date"`
+	Airline       string `query:"airline"`
+	Name          string `query:"name"`
+	DepTimeStr    string `query:"departure_time"` /*validate:"time"`*/
+	SortBy        string `query:"sort_by"`
+	SortOrder     string `query:"sort_order"`
 }
 
 var timeout = 10 * time.Second
 
 func (f *Flight) Get(c echo.Context) error {
 	TTL := f.Config.Redis.TTL
-	var freq GetFlightRequest
-	if err := c.Bind(&freq); err != nil {
+	var req GetRequest
+	var flights []models.Flight
+	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, "")
 	}
-	if err := f.Validator.Struct(&freq); err != nil {
+	if err := f.Validator.Struct(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	cacheKey := fmt.Sprintf("%s-%s-%s", freq.DepartureCity, freq.ArrivalCity, freq.Date)
-	cacheResult, err := f.Redis.Get(cacheKey).Result()
-	var apiResult []models.Flight
+	cacheKey := fmt.Sprintf("%s-%s-%s", req.DepartureCity, req.ArrivalCity, req.Date)
+	cacheResult, err := f.Redis.Get(cacheKey).Bytes()
+
+	err = json.Unmarshal(cacheResult, &flights)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
 	if err != nil && err != redis.Nil {
-		// Error reading from cache
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get result from cache"})
+		return c.JSON(http.StatusInternalServerError, "Inetrnal Server Error")
 	} else if err == redis.Nil {
 		// Cache miss, get data from API
-		apiResult, err = getFlightsFromAPI(freq.DepartureCity, freq.ArrivalCity, freq.Date)
+		apiResult, err := getFlightsFromAPI(req.DepartureCity, req.ArrivalCity, req.Date)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get flights from API"})
 		}
@@ -67,6 +71,7 @@ func (f *Flight) Get(c echo.Context) error {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to store result in cache"})
 		}
+		cacheResult = jsonData
 	}
 
 	// Filter
@@ -74,23 +79,23 @@ func (f *Flight) Get(c echo.Context) error {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid airline ID"})
 	}
-	if freq.Airline != "" {
-		filteredFlights = append(filteredFlights, filterAirline(apiResult, freq.Airline)...)
+	if req.Airline != "" {
+		filteredFlights = append(filteredFlights, filterAirline(flights, req.Airline)...)
 	}
-	if freq.Name != "" {
-		filteredFlights = append(filteredFlights, filterName(apiResult, freq.Name)...)
+	if req.Name != "" {
+		filteredFlights = append(filteredFlights, filterName(flights, req.Name)...)
 	}
-	if freq.DepTimeStr != "" {
-		depTime, err := time.Parse("15:04", freq.DepTimeStr)
+	if req.DepTimeStr != "" {
+		depTime, err := time.Parse("15:04", req.DepTimeStr)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid departure time format"})
 		}
-		filteredFlights = append(filteredFlights, filterDeptime(apiResult, depTime)...)
+		filteredFlights = append(filteredFlights, filterDeptime(flights, depTime)...)
 	}
 
 	// Sort
-	if freq.SortBy != "" {
-		flights, err := sortFlight(apiResult, freq.SortBy, freq.SortOrder)
+	if req.SortBy != "" {
+		flights, err := sortFlight(flights, req.SortBy, req.SortOrder)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid sort argument"})
 		}
@@ -102,9 +107,9 @@ func (f *Flight) Get(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to marshal API result"})
 	}
-	cacheResult = string(jsonData)
+	cacheResult = jsonData
 
-	var flights []models.Flight
+	// var flights []models.Flight
 	err = json.Unmarshal([]byte(cacheResult), &flights)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to unmarshal cache result"})
