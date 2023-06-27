@@ -2,8 +2,7 @@ package handler
 
 import (
 	"aliagha/config"
-
-	"context"
+	"aliagha/services"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,48 +19,24 @@ type Flight struct {
 	Validator *validator.Validate
 	Config    *config.Config
 }
-type FlightModuleAPI struct {
-	ID         int32
-	DepCityID  int32
-	DepCity    City
-	ArrCityID  int32
-	ArrCity    City
-	DepTime    time.Time
-	ArrTime    time.Time
-	Date       time.Time
-	AirplaneID int32
-	Airplane   Airplane
-	Airline    string
-	Price      int32
-	CxlSitID   int32
-	LeftSeat   int32
-}
-type City struct {
-	ID   int32
-	Name string
-}
-type Airplane struct {
-	ID   int32
-	Name string
-}
-type GetRequest struct {
-	DepartureCity City      `query:"departure_city" validate:"required"`
-	ArrivalCity   City      `query:"arrival_city" validate:"required"`
-	Date          time.Time `query:"date" validate:"required,datetime"`
-	Airline       string    `query:"airline"`
-	Name          string    `query:"name"`
-	Deptime       time.Time `query:"departure_time"` /*validate:"time"`*/
-	SortBy        string    `query:"sort_by"`
-	SortOrder     string    `query:"sort_order"`
-	EmptySeats    int32     `query:"left_seat"`
-}
 
-var timeout = 10 * time.Second
+type GetRequest struct {
+	DepartureCity  services.City `query:"departure_city" validate:"required"`
+	ArrivalCity    services.City `query:"arrival_city" validate:"required"`
+	Date           time.Time     `query:"date" validate:"required,datetime"`
+	Airline        string        `query:"airline"`
+	Name           string        `query:"name"`
+	Deptime        time.Time     `query:"departure_time"` /*validate:"datetime"*/
+	SortBy         string        `query:"sort_by"`
+	SortOrder      string        `query:"sort_order"`
+	RemainingSeats int32         `query:"remaining_seats"`
+}
 
 func (f *Flight) Get(ctx echo.Context) error {
 	TTL := f.Config.Redis.TTL
+
 	var req GetRequest
-	var flights []FlightModuleAPI
+	var flights []services.FlightModuleAPI
 	if err := ctx.Bind(&req); err != nil {
 		return ctx.JSON(http.StatusBadRequest, "")
 	}
@@ -74,16 +49,11 @@ func (f *Flight) Get(ctx echo.Context) error {
 	cacheKey := fmt.Sprintf("%s-%s-%s", req.DepartureCity.Name, req.ArrivalCity.Name, req.Date.Format("2003-02-01"))
 	cacheResult, err := f.Redis.Get(cacheKey).Bytes()
 
-	err = json.Unmarshal(cacheResult, &flights)
-	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, err.Error())
-	}
-
 	if err != nil && err != redis.Nil {
 		return ctx.JSON(http.StatusInternalServerError, "Inetrnal Server Error")
 	} else if err == redis.Nil {
 		// Cache miss, get data from API
-		apiResult, err := getFlightsFromAPI(req.DepartureCity, req.ArrivalCity, req.Date)
+		apiResult, err := services.GetFlightsFromAPI(req.DepartureCity, req.ArrivalCity, req.Date)
 		if err != nil {
 			return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get flights from API"})
 		}
@@ -98,20 +68,25 @@ func (f *Flight) Get(ctx echo.Context) error {
 		}
 
 		flights = apiResult
+	} else {
+		err = json.Unmarshal(cacheResult, &flights)
+		if err != nil {
+			return ctx.JSON(http.StatusBadRequest, err.Error())
+		}
 	}
 
 	// Filter
-	var filteredFlights []FlightModuleAPI
+
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid airline ID"})
 	}
 
 	if req.Airline != "" {
-		filteredFlights = append(filteredFlights, filterByAirline(flights, req.Airline)...)
+		flights = append(flights, filterByAirline(flights, req.Airline)...)
 	}
 
 	if req.Name != "" {
-		filteredFlights = append(filteredFlights, filterByName(flights, req.Name)...)
+		flights = append(flights, filterByName(flights, req.Name)...)
 	}
 
 	if req.Deptime.Format("2003-02-01") != "" {
@@ -120,10 +95,10 @@ func (f *Flight) Get(ctx echo.Context) error {
 			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid departure time format"})
 		}
 
-		filteredFlights = append(filteredFlights, filterByDeptime(flights, req.Deptime)...)
+		flights = append(flights, filterByDeptime(flights, req.Deptime)...)
 	}
-	if req.EmptySeats > 0 {
-		filteredFlights = append(filteredFlights, filterByLeftSeat(flights, req.EmptySeats)...)
+	if req.RemainingSeats > 0 {
+		flights = append(flights, filterByRemainingSeats(flights, req.RemainingSeats)...)
 	}
 
 	// Sort
@@ -133,11 +108,11 @@ func (f *Flight) Get(ctx echo.Context) error {
 			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid sort argument"})
 		}
 
-		filteredFlights = append(filteredFlights, flights...)
+		flights = append(flights, flights...)
 	}
 
 	// Return filtered results
-	jsonData, err := json.Marshal(filteredFlights)
+	jsonData, err := json.Marshal(flights)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to marshal API result"})
 	}
@@ -151,64 +126,7 @@ func (f *Flight) Get(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, flights)
 }
 
-func getFlightsFromAPI(depCity, arrCity City, date time.Time) ([]FlightModuleAPI, error) {
-
-	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API?departure_city=%s&arrival_city%s&date=%s", depCity.Name, arrCity.Name, date.Format("2003-02-01"))
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	req = req.WithContext(ctx)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var apiResult []FlightModuleAPI
-	err = json.NewDecoder(resp.Body).Decode(&apiResult)
-	if err != nil {
-		return nil, err
-	}
-
-	return apiResult, nil
-}
-func getFlightFromAPI(c echo.Context) (FlightModuleAPI, error) {
-	id := c.QueryParam("id")
-	url := fmt.Sprintf("https://github.com/kianakholousi/Flight-Data-API/%s", id)
-	var flight FlightModuleAPI
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return flight, err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	req = req.WithContext(ctx)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return flight, err
-	}
-	defer resp.Body.Close()
-
-	var apiResult FlightModuleAPI
-	err = json.NewDecoder(resp.Body).Decode(&apiResult)
-	if err != nil {
-		return flight, err
-	}
-
-	return apiResult, nil
-}
-func sortFlight(flights []FlightModuleAPI, sortBy, sortOrder string) ([]FlightModuleAPI, error) {
+func sortFlight(flights []services.FlightModuleAPI, sortBy, sortOrder string) ([]services.FlightModuleAPI, error) {
 	if sortOrder == "" {
 		sortOrder = "asc"
 	}
@@ -250,8 +168,8 @@ func sortFlight(flights []FlightModuleAPI, sortBy, sortOrder string) ([]FlightMo
 
 	return flights, nil
 }
-func filterByAirline(flights []FlightModuleAPI, filter string) []FlightModuleAPI {
-	var filteredFlights []FlightModuleAPI
+func filterByAirline(flights []services.FlightModuleAPI, filter string) []services.FlightModuleAPI {
+	var filteredFlights []services.FlightModuleAPI
 	for _, flight := range flights {
 		if flight.Airline == filter {
 			filteredFlights = append(filteredFlights, flight)
@@ -260,8 +178,8 @@ func filterByAirline(flights []FlightModuleAPI, filter string) []FlightModuleAPI
 
 	return filteredFlights
 }
-func filterByName(flights []FlightModuleAPI, filter string) []FlightModuleAPI {
-	var filteredFlights []FlightModuleAPI
+func filterByName(flights []services.FlightModuleAPI, filter string) []services.FlightModuleAPI {
+	var filteredFlights []services.FlightModuleAPI
 	for _, flight := range flights {
 		if flight.Airplane.Name == filter {
 			filteredFlights = append(filteredFlights, flight)
@@ -270,8 +188,8 @@ func filterByName(flights []FlightModuleAPI, filter string) []FlightModuleAPI {
 
 	return filteredFlights
 }
-func filterByDeptime(flights []FlightModuleAPI, filter time.Time) []FlightModuleAPI {
-	var filteredFlights []FlightModuleAPI
+func filterByDeptime(flights []services.FlightModuleAPI, filter time.Time) []services.FlightModuleAPI {
+	var filteredFlights []services.FlightModuleAPI
 	for _, flight := range flights {
 		if flight.DepTime.Hour() == filter.Hour() && flight.DepTime.Minute() == filter.Minute() {
 			filteredFlights = append(filteredFlights, flight)
@@ -280,10 +198,10 @@ func filterByDeptime(flights []FlightModuleAPI, filter time.Time) []FlightModule
 
 	return filteredFlights
 }
-func filterByLeftSeat(flights []FlightModuleAPI, filter int32) []FlightModuleAPI {
-	var filteredFlights []FlightModuleAPI
+func filterByRemainingSeats(flights []services.FlightModuleAPI, filter int32) []services.FlightModuleAPI {
+	var filteredFlights []services.FlightModuleAPI
 	for _, flight := range flights {
-		if flight.LeftSeat >= filter {
+		if flight.RemainingSeats >= filter {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}
