@@ -26,7 +26,7 @@ type GetRequest struct {
 	ArrivalCity    string    `query:"arrival_city" validate:"required"`
 	Date           time.Time `query:"date" validate:"required,datetime"`
 	Airline        string    `query:"airline"`
-	Name           string    `query:"name"`
+	AirplaneName   string    `query:"airplane_name"`
 	Deptime        time.Time `query:"departure_time" validate:"datetime"`
 	SortBy         string    `query:"sort_by"`
 	SortOrder      string    `query:"sort_order"`
@@ -57,7 +57,7 @@ func (f *Flight) Get(ctx echo.Context) error {
 
 		jsonData, err := json.Marshal(apiResult)
 		if err != nil {
-			return ctx.JSON(http.StatusInternalServerError, "Internal Sever Error")
+			return ctx.JSON(http.StatusBadRequest, err.Error())
 		}
 
 		err = f.Redis.Set(cacheKey, jsonData, f.Config.Redis.TTL).Err()
@@ -77,8 +77,8 @@ func (f *Flight) Get(ctx echo.Context) error {
 		flights = append(flights, filterByAirline(flights, req.Airline)...)
 	}
 
-	if req.Name != "" {
-		flights = append(flights, filterByName(flights, req.Name)...)
+	if req.AirplaneName != "" {
+		flights = append(flights, filterByName(flights, req.AirplaneName)...)
 	}
 
 	if req.Deptime.Format("2003-02-01") != "" {

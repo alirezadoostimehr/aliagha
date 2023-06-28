@@ -1,10 +1,8 @@
 package services
 
 import (
-	"aliagha/config"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,13 +11,12 @@ import (
 	"github.com/eapache/go-resiliency/breaker"
 )
 
-var ErrForbidden = errors.New("forbidden access")
-
 type APIMockClient struct {
 	Client  *http.Client
 	Breaker *breaker.Breaker
 	BaseURL string
 	APIKey  string
+	Timeout time.Duration
 }
 
 type FlightResponse struct {
@@ -46,11 +43,8 @@ type Airplane struct {
 	Name string
 }
 
-var c *config.Config
-var timeout = c.MockAPI.Request_timeout
-
 func (c *APIMockClient) GetFlights(depCity, arrCity string, date time.Time) ([]FlightResponse, error) {
-	url := c.BaseURL + "/flights" + fmt.Sprintf("=%s&arrival_city%s&date=%s", depCity, arrCity, date.Format("2003-02-01"))
+	url := c.BaseURL + "/flights" + fmt.Sprintf("?departure_city=%s&arrival_city%s&date=%s", depCity, arrCity, date.Format("2003-02-01"))
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -62,13 +56,12 @@ func (c *APIMockClient) GetFlights(depCity, arrCity string, date time.Time) ([]F
 
 	var resp []FlightResponse
 	err = c.Breaker.Run(func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
 		defer cancel()
 
 		req = req.WithContext(ctx)
 
-		client := &http.Client{}
-		response, err := client.Do(req)
+		response, err := c.Client.Do(req)
 		if err != nil {
 			return fmt.Errorf("apimock_get_flights: request failed, error: %w", err)
 		}
@@ -80,19 +73,16 @@ func (c *APIMockClient) GetFlights(depCity, arrCity string, date time.Time) ([]F
 			return fmt.Errorf("apimock_get_flights: read response body failed, error: %w", err)
 		}
 
-		switch response.StatusCode {
-		case http.StatusOK:
-			err = json.Unmarshal(responseBody, &resp)
-			if err != nil {
-				return fmt.Errorf("apimock_get_flights: parse response body failed, response: %s, error: %w", responseBody, err)
-			}
-
-			return nil
-		case http.StatusForbidden:
-			return ErrForbidden
-		default:
+		if response.StatusCode != http.StatusOK {
 			return fmt.Errorf("apimock_get_flights: unhandeled response, status: %d, response: %s", response.StatusCode, responseBody)
 		}
+
+		err = json.Unmarshal(responseBody, &resp)
+		if err != nil {
+			return fmt.Errorf("apimock_get_flights: parse response body failed, response: %s, error: %w", responseBody, err)
+		}
+
+		return nil
 	})
 
 	if err != nil {

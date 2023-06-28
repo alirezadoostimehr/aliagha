@@ -71,18 +71,18 @@ func (suite *FlightTestSuite) TestFlighGet_Success() {
 		  "ID": 1,
 		  "DepCity": {
 			"ID": 1,
-			"Name": "City A"
+			"AirplaneName": "City A"
 		  },
 		  "ArrCity": {
 			"ID": 2,
-			"Name": "City B"
+			"AirplaneName": "City B"
 		  },
 		  "DepTime": "2023-06-28T10:00:00Z",
 		  "ArrTime": "2023-06-28T13:00:00Z",
 		  "Date": "2023-06-28",
 		  "Airplane": {
 			"ID": 1,
-			"Name": "Boeing 737"
+			"AirplaneName": "Boeing 737"
 		  },
 		  "Airline": "Airline X",
 		  "Price": 200,
@@ -93,18 +93,18 @@ func (suite *FlightTestSuite) TestFlighGet_Success() {
 		  "ID": 2,
 		  "DepCity": {
 			"ID": 1,
-			"Name": "City A"
+			"AirplaneName": "City A"
 		  },
 		  "ArrCity": {
 			"ID": 2,
-			"Name": "City B"
+			"AirplaneName": "City B"
 		  },
 		  "DepTime": "2023-06-28T14:00:00Z",
 		  "ArrTime": "2023-06-28T17:00:00Z",
 		  "Date": "2023-06-28",
 		  "Airplane": {
 			"ID": 2,
-			"Name": "Airbus A320"
+			"AirplaneName": "Airbus A320"
 		  },
 		  "Airline": "Example Airlines",
 		  "Price": 250,
