@@ -27,7 +27,8 @@ type GetRequest struct {
 	Date           time.Time `query:"date" validate:"required,datetime"`
 	Airline        string    `query:"airline"`
 	AirplaneName   string    `query:"airplane_name"`
-	Deptime        time.Time `query:"departure_time" validate:"datetime"`
+	DeptimeFrom    time.Time `query:"departure_time_from" validate:"datetime"`
+	DeptimeTo      time.Time `query:"departure_time_to" validate:"datetime"`
 	SortBy         string    `query:"sort_by"`
 	SortOrder      string    `query:"sort_order"`
 	RemainingSeats int32     `query:"remaining_seats"`
@@ -74,19 +75,19 @@ func (f *Flight) Get(ctx echo.Context) error {
 	}
 
 	if req.Airline != "" {
-		flights = append(flights, filterByAirline(flights, req.Airline)...)
+		flights = filterByAirline(flights, req.Airline)
 	}
 
 	if req.AirplaneName != "" {
-		flights = append(flights, filterByName(flights, req.AirplaneName)...)
+		flights = filterByName(flights, req.AirplaneName)
 	}
 
-	if req.Deptime.Format("2003-02-01") != "" {
-		flights = append(flights, filterByDeptime(flights, req.Deptime)...)
+	if req.DeptimeFrom.Format("2003-02-01") != "" && req.DeptimeTo.Format("2003-02-01") != "" {
+		flights = filterByDeptime(flights, req.DeptimeFrom, req.DeptimeTo)
 	}
 
 	if req.RemainingSeats > 0 {
-		flights = append(flights, filterByRemainingSeats(flights, req.RemainingSeats)...)
+		flights = filterByRemainingSeats(flights, req.RemainingSeats)
 	}
 
 	if req.SortBy != "" {
@@ -161,10 +162,10 @@ func filterByName(flights []services.FlightResponse, name string) []services.Fli
 	return filteredFlights
 }
 
-func filterByDeptime(flights []services.FlightResponse, depTime time.Time) []services.FlightResponse {
+func filterByDeptime(flights []services.FlightResponse, depTimeFrom, dapTimeTo time.Time) []services.FlightResponse {
 	var filteredFlights []services.FlightResponse
 	for _, flight := range flights {
-		if flight.DepTime.Hour() == depTime.Hour() && flight.DepTime.Minute() == depTime.Minute() {
+		if flight.DepTime.After(depTimeFrom) && flight.DepTime.Before(dapTimeTo) {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}
