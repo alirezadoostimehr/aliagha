@@ -9,12 +9,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func AuthenticatorMiddleware(secretKey string) echo.MiddlewareFunc {
+func AuthMiddleware(secretKey string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			authHeader := c.Request().Header.Get("Authorization")
+		return func(ctx echo.Context) error {
+			authHeader := ctx.Request().Header.Get("Authorization")
 			if authHeader == "" {
-				return c.JSON(http.StatusUnauthorized, "Missing Authorization header")
+				return ctx.NoContent(http.StatusUnauthorized)
 			}
 
 			tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
@@ -25,15 +25,16 @@ func AuthenticatorMiddleware(secretKey string) echo.MiddlewareFunc {
 				}
 				return []byte(secretKey), nil
 			})
+
 			if err != nil || !token.Valid {
-				return c.JSON(http.StatusUnauthorized, "Invalid or expired token")
+				return ctx.JSON(http.StatusUnauthorized, "Invalid or expired token")
 			}
 
 			claims := token.Claims.(jwt.MapClaims)
 			userID := claims["user_id"].(string)
-			c.Set("user_id", userID)
+			ctx.Set("user_id", userID)
 
-			return next(c)
+			return next(ctx)
 		}
 	}
 }
