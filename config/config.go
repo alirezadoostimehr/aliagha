@@ -63,7 +63,7 @@ type Params struct {
 
 type JWT struct {
 	SecretKey string
-	ExpiresIn time.Time
+	ExpiresIn time.Duration
 }
 
 func Init(param Params) (*Config, error) {
@@ -113,7 +113,8 @@ func Init(param Params) (*Config, error) {
 		EncryptionAlgorithm: viper.GetString("security.encryption_algorithm"),
 	}
 
-	expiresIn, err := time.Parse(time.RFC3339, viper.GetString("jwt.expires_in"))
+	expiresIn := viper.GetDuration("jwt.expires_in")
+
 	if err != nil {
 		panic(err)
 	}
@@ -132,4 +133,9 @@ func Init(param Params) (*Config, error) {
 		Security:       *security,
 		JWT:            *jwt,
 	}, nil
+}
+
+func GetJWTSecret() string {
+	// Read the JWT secret key from your configuration
+	return configInstance.JWT.SecretKey
 }

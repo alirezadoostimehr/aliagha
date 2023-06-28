@@ -4,10 +4,14 @@ import (
 	"aliagha/config"
 	"aliagha/database"
 	"aliagha/http/handler"
+<<<<<<< HEAD
 	"aliagha/services"
 	"net/http"
 
 	"github.com/eapache/go-resiliency/breaker"
+=======
+
+>>>>>>> add register process and related tests
 	"github.com/go-playground/validator/v10"
 
 	"github.com/labstack/echo/v4"
@@ -69,10 +73,13 @@ func startServer() {
 	}
 
 	flight := handler.Flight{Redis: redis, Validator: vldt, Config: cfg, APIMock: mockClient}
+	// jwtMiddleware := middleware.AuthenticatorMiddleware(cfg.JWT.SecretKey)
+
 	e.GET("/flights", flight.Get)
 
 	user := handler.User{DB: db, JWT: &cfg.JWT, Validator: vldt}
 	e.POST("/user/login", user.Login)
+	e.POST("/user/register", user.Register)
 
 	e.Start("localhost:3030")
 }
