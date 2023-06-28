@@ -3,6 +3,8 @@ module aliagha
 go 1.20
 
 require (
+	bou.ke/monkey v1.0.2
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/eapache/go-resiliency v1.3.0
 	github.com/go-playground/validator/v10 v10.14.1

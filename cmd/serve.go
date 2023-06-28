@@ -4,7 +4,10 @@ import (
 	"aliagha/config"
 	"aliagha/database"
 	"aliagha/http/handler"
+	"aliagha/services"
+	"net/http"
 
+	"github.com/eapache/go-resiliency/breaker"
 	"github.com/go-playground/validator/v10"
 
 	"github.com/labstack/echo/v4"
@@ -56,7 +59,14 @@ func startServer() {
 
 	e := echo.New()
 
-	flight := handler.Flight{Redis: redis, Validator: vldt, Config: cfg}
+	mockClient := services.APIMockClient{
+		Client:  &http.Client{},
+		Breaker: &breaker.Breaker{},
+		BaseURL: cfg.MockAPI.URL,
+		APIKey:  cfg.MockAPI.AuthKey,
+	}
+
+	flight := handler.Flight{Redis: redis, Validator: vldt, Config: cfg, APIMock: mockClient}
 	e.GET("/flights", flight.Get)
 
 	user := handler.User{DB: db, JWT: &cfg.JWT, Validator: vldt}

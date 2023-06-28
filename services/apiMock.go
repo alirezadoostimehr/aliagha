@@ -6,19 +6,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/eapache/go-resiliency/breaker"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/eapache/go-resiliency/breaker"
 )
 
 var ErrForbidden = errors.New("forbidden access")
 
 type APIMockClient struct {
-	client  *http.Client
-	breaker *breaker.Breaker
-	baseURL string
-	apiKey  string
+	Client  *http.Client
+	Breaker *breaker.Breaker
+	BaseURL string
+	APIKey  string
 }
 
 type FlightResponse struct {
@@ -49,7 +50,7 @@ var c *config.Config
 var timeout = c.MockAPI.Request_timeout
 
 func (c *APIMockClient) GetFlights(depCity, arrCity string, date time.Time) ([]FlightResponse, error) {
-	url := c.baseURL + "/flights" + fmt.Sprintf("=%s&arrival_city%s&date=%s", depCity, arrCity, date.Format("2003-02-01"))
+	url := c.BaseURL + "/flights" + fmt.Sprintf("=%s&arrival_city%s&date=%s", depCity, arrCity, date.Format("2003-02-01"))
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -57,10 +58,10 @@ func (c *APIMockClient) GetFlights(depCity, arrCity string, date time.Time) ([]F
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Api-Key", c.apiKey)
+	req.Header.Set("X-Api-Key", c.APIKey)
 
 	var resp []FlightResponse
-	err = c.breaker.Run(func() error {
+	err = c.Breaker.Run(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
