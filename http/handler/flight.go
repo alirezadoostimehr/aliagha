@@ -18,25 +18,23 @@ type Flight struct {
 	Redis     *redis.Client
 	Validator *validator.Validate
 	Config    *config.Config
+	APIMock   services.APIMockClient
 }
 
 type GetRequest struct {
-	DepartureCity  services.City `query:"departure_city" validate:"required"`
-	ArrivalCity    services.City `query:"arrival_city" validate:"required"`
-	Date           time.Time     `query:"date" validate:"required,datetime"`
-	Airline        string        `query:"airline"`
-	Name           string        `query:"name"`
-	Deptime        time.Time     `query:"departure_time"` /*validate:"datetime"*/
-	SortBy         string        `query:"sort_by"`
-	SortOrder      string        `query:"sort_order"`
-	RemainingSeats int32         `query:"remaining_seats"`
+	DepartureCity  string    `query:"departure_city" validate:"required"`
+	ArrivalCity    string    `query:"arrival_city" validate:"required"`
+	Date           time.Time `query:"date" validate:"required,datetime"`
+	Airline        string    `query:"airline"`
+	Name           string    `query:"name"`
+	Deptime        time.Time `query:"departure_time" validate:"datetime"`
+	SortBy         string    `query:"sort_by"`
+	SortOrder      string    `query:"sort_order"`
+	RemainingSeats int32     `query:"remaining_seats"`
 }
 
 func (f *Flight) Get(ctx echo.Context) error {
-	TTL := f.Config.Redis.TTL
-
 	var req GetRequest
-	var flights []services.FlightModuleAPI
 	if err := ctx.Bind(&req); err != nil {
 		return ctx.JSON(http.StatusBadRequest, "")
 	}
@@ -45,26 +43,26 @@ func (f *Flight) Get(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	// req.Date = req.Deptime.Format("2006-01-02")
-	cacheKey := fmt.Sprintf("%s-%s-%s", req.DepartureCity.Name, req.ArrivalCity.Name, req.Date.Format("2003-02-01"))
+	cacheKey := fmt.Sprintf("%s-%s-%s", req.DepartureCity, req.ArrivalCity, req.Date.Format("2003-02-01"))
 	cacheResult, err := f.Redis.Get(cacheKey).Bytes()
 
+	var flights []services.FlightResponse
 	if err != nil && err != redis.Nil {
-		return ctx.JSON(http.StatusInternalServerError, "Inetrnal Server Error")
+		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
 	} else if err == redis.Nil {
-		// Cache miss, get data from API
-		apiResult, err := services.GetFlightsFromAPI(req.DepartureCity, req.ArrivalCity, req.Date)
+		apiResult, err := f.APIMock.GetFlights(req.DepartureCity, req.ArrivalCity, req.Date)
 		if err != nil {
-			return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get flights from API"})
+			return ctx.JSON(http.StatusInternalServerError, "Internal Sever Error")
 		}
-		// Store result in cache
+
 		jsonData, err := json.Marshal(apiResult)
 		if err != nil {
-			return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to marshal API result"})
+			return ctx.JSON(http.StatusInternalServerError, "Internal Sever Error")
 		}
-		err = f.Redis.Set(cacheKey, jsonData, TTL).Err()
+
+		err = f.Redis.Set(cacheKey, jsonData, f.Config.Redis.TTL).Err()
 		if err != nil {
-			return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to store result in cache"})
+			return ctx.JSON(http.StatusInternalServerError, "Internal Sever Error")
 		}
 
 		flights = apiResult
@@ -73,12 +71,6 @@ func (f *Flight) Get(ctx echo.Context) error {
 		if err != nil {
 			return ctx.JSON(http.StatusBadRequest, err.Error())
 		}
-	}
-
-	// Filter
-
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid airline ID"})
 	}
 
 	if req.Airline != "" {
@@ -90,43 +82,21 @@ func (f *Flight) Get(ctx echo.Context) error {
 	}
 
 	if req.Deptime.Format("2003-02-01") != "" {
-
-		if err != nil {
-			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid departure time format"})
-		}
-
 		flights = append(flights, filterByDeptime(flights, req.Deptime)...)
 	}
+
 	if req.RemainingSeats > 0 {
 		flights = append(flights, filterByRemainingSeats(flights, req.RemainingSeats)...)
 	}
 
-	// Sort
 	if req.SortBy != "" {
-		flights, err := sortFlight(flights, req.SortBy, req.SortOrder)
-		if err != nil {
-			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid sort argument"})
-		}
-
-		flights = append(flights, flights...)
-	}
-
-	// Return filtered results
-	jsonData, err := json.Marshal(flights)
-	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to marshal API result"})
-	}
-	cacheResult = jsonData
-
-	err = json.Unmarshal([]byte(cacheResult), &flights)
-	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to unmarshal cache result"})
+		flights = sortFlight(flights, req.SortBy, req.SortOrder)
 	}
 
 	return ctx.JSON(http.StatusOK, flights)
 }
 
-func sortFlight(flights []services.FlightModuleAPI, sortBy, sortOrder string) ([]services.FlightModuleAPI, error) {
+func sortFlight(flights []services.FlightResponse, sortBy, sortOrder string) []services.FlightResponse {
 	if sortOrder == "" {
 		sortOrder = "asc"
 	}
@@ -163,45 +133,49 @@ func sortFlight(flights []services.FlightModuleAPI, sortBy, sortOrder string) ([
 			})
 		}
 	default:
-		return nil, fmt.Errorf("Invalid sort_by parameter")
+		return flights
 	}
 
-	return flights, nil
+	return flights
 }
-func filterByAirline(flights []services.FlightModuleAPI, filter string) []services.FlightModuleAPI {
-	var filteredFlights []services.FlightModuleAPI
+
+func filterByAirline(flights []services.FlightResponse, airline string) []services.FlightResponse {
+	var filteredFlights []services.FlightResponse
 	for _, flight := range flights {
-		if flight.Airline == filter {
+		if flight.Airline == airline {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}
 
 	return filteredFlights
 }
-func filterByName(flights []services.FlightModuleAPI, filter string) []services.FlightModuleAPI {
-	var filteredFlights []services.FlightModuleAPI
+
+func filterByName(flights []services.FlightResponse, name string) []services.FlightResponse {
+	var filteredFlights []services.FlightResponse
 	for _, flight := range flights {
-		if flight.Airplane.Name == filter {
+		if flight.Airplane.Name == name {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}
 
 	return filteredFlights
 }
-func filterByDeptime(flights []services.FlightModuleAPI, filter time.Time) []services.FlightModuleAPI {
-	var filteredFlights []services.FlightModuleAPI
+
+func filterByDeptime(flights []services.FlightResponse, depTime time.Time) []services.FlightResponse {
+	var filteredFlights []services.FlightResponse
 	for _, flight := range flights {
-		if flight.DepTime.Hour() == filter.Hour() && flight.DepTime.Minute() == filter.Minute() {
+		if flight.DepTime.Hour() == depTime.Hour() && flight.DepTime.Minute() == depTime.Minute() {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}
 
 	return filteredFlights
 }
-func filterByRemainingSeats(flights []services.FlightModuleAPI, filter int32) []services.FlightModuleAPI {
-	var filteredFlights []services.FlightModuleAPI
+
+func filterByRemainingSeats(flights []services.FlightResponse, remainingSeats int32) []services.FlightResponse {
+	var filteredFlights []services.FlightResponse
 	for _, flight := range flights {
-		if flight.RemainingSeats >= filter {
+		if flight.RemainingSeats >= remainingSeats {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}

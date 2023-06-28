@@ -21,7 +21,7 @@ import (
 
 type FlightTestSuite struct {
 	suite.Suite
-	flights   []services.FlightModuleAPI
+	flights   []services.FlightResponse
 	Config    *config.Config
 	Redis     *redis.Client
 	Validator *validator.Validate
@@ -73,7 +73,7 @@ func TestFlight_Get(t *testing.T) {
 	redisClient := redis.NewClient(&redis.Options{})
 	validator := validator.New()
 
-	// Create a new instance of the Flight struct
+	// Create a new instance of the FlightResponse struct
 
 	f := &Flight{
 		Config:    &config.Config{},
@@ -125,7 +125,7 @@ func TestFlight_Get(t *testing.T) {
 // 		// ...
 
 // 		// Create a mock API response
-// 		apiResult := []services.FlightModuleAPI{
+// 		apiResult := []services.FlightResponse{
 // 			// ...
 // 		}
 
@@ -162,7 +162,7 @@ func TestGetRequestValidation(t *testing.T) {
 		ArrivalCity:    services.City{ID: 2, Name: "City B"},
 		Date:           time.Now(),
 		Airline:        "Airline X",
-		Name:           "Flight XYZ",
+		Name:           "FlightResponse XYZ",
 		Deptime:        time.Now(),
 		SortBy:         "price",
 		SortOrder:      "asc",
@@ -180,7 +180,7 @@ func TestGetRequestValidation(t *testing.T) {
 		ArrivalCity:    services.City{ID: 2, Name: "City B"},
 		Date:           time.Now(),
 		Airline:        "Airline X",
-		Name:           "Flight XYZ",
+		Name:           "FlightResponse XYZ",
 		Deptime:        time.Now(),
 		SortBy:         "price",
 		SortOrder:      "asc",
@@ -195,7 +195,7 @@ func TestGetRequestValidation(t *testing.T) {
 
 func (suite *FlightTestSuite) SetupTest() {
 	// Initialize the flights for testing
-	suite.flights = []services.FlightModuleAPI{
+	suite.flights = []services.FlightResponse{
 		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
 		{Price: 200, DepTime: time.Date(2023, 6, 26, 9, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), Airline: "Airline B", Airplane: services.Airplane{Name: "Plane B"}, RemainingSeats: 50},
 		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
@@ -203,7 +203,7 @@ func (suite *FlightTestSuite) SetupTest() {
 }
 
 func (suite *FlightTestSuite) TestSortFlight_Price_Ascending() {
-	expected := []services.FlightModuleAPI{
+	expected := []services.FlightResponse{
 		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
 		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
 		{Price: 200, DepTime: time.Date(2023, 6, 26, 9, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), Airline: "Airline B", Airplane: services.Airplane{Name: "Plane B"}, RemainingSeats: 50},
@@ -215,7 +215,7 @@ func (suite *FlightTestSuite) TestSortFlight_Price_Ascending() {
 }
 
 func (suite *FlightTestSuite) TestSortFlight_DepTime_Descending() {
-	expected := []services.FlightModuleAPI{
+	expected := []services.FlightResponse{
 		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
 		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
 		{Price: 200, DepTime: time.Date(2023, 6, 26, 9, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), Airline: "Airline B", Airplane: services.Airplane{Name: "Plane B"}, RemainingSeats: 50},
@@ -227,7 +227,7 @@ func (suite *FlightTestSuite) TestSortFlight_DepTime_Descending() {
 }
 
 func (suite *FlightTestSuite) TestSortFlight_Duration_Ascending() {
-	expected := []services.FlightModuleAPI{
+	expected := []services.FlightResponse{
 		{Price: 200, DepTime: time.Date(2023, 6, 26, 9, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), Airline: "Airline B", Airplane: services.Airplane{Name: "Plane B"}, RemainingSeats: 50},
 		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
 		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
@@ -244,7 +244,7 @@ func (suite *FlightTestSuite) TestSortFlight_InvalidSortBy() {
 }
 
 func (suite *FlightTestSuite) TestFilterByAirline() {
-	expected := []services.FlightModuleAPI{
+	expected := []services.FlightResponse{
 		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
 		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
 	}
@@ -254,7 +254,7 @@ func (suite *FlightTestSuite) TestFilterByAirline() {
 }
 
 func (suite *FlightTestSuite) TestFilterByName() {
-	expected := []services.FlightModuleAPI{
+	expected := []services.FlightResponse{
 		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
 	}
 
@@ -263,7 +263,7 @@ func (suite *FlightTestSuite) TestFilterByName() {
 }
 
 func (suite *FlightTestSuite) TestFilterByDeptime() {
-	expected := []services.FlightModuleAPI{
+	expected := []services.FlightResponse{
 		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
 	}
 
@@ -272,7 +272,7 @@ func (suite *FlightTestSuite) TestFilterByDeptime() {
 }
 
 func (suite *FlightTestSuite) TestFilterByRemainingSeats() {
-	expected := []services.FlightModuleAPI{
+	expected := []services.FlightResponse{
 		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
 		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
 	}
