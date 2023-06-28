@@ -71,20 +71,20 @@ func (suite *FlightTestSuite) TestFlighGet_Success() {
 		  "ID": 1,
 		  "DepCity": {
 			"ID": 1,
-			"AirplaneName": "City A"
+			"Name": "City A"
 		  },
 		  "ArrCity": {
 			"ID": 2,
-			"AirplaneName": "City B"
+			"Name": "City B"
 		  },
 		  "DepTime": "2023-06-28T10:00:00Z",
 		  "ArrTime": "2023-06-28T13:00:00Z",
-		  "Date": "2023-06-28",
+		  "date": "2023-06-28",
 		  "Airplane": {
 			"ID": 1,
-			"AirplaneName": "Boeing 737"
+			"airplane_name": "Boeing 737"
 		  },
-		  "Airline": "Airline X",
+		  "airline": "Airline X",
 		  "Price": 200,
 		  "CxlSitID": 123,
 		  "RemainingSeats": 50
@@ -93,20 +93,20 @@ func (suite *FlightTestSuite) TestFlighGet_Success() {
 		  "ID": 2,
 		  "DepCity": {
 			"ID": 1,
-			"AirplaneName": "City A"
+			"Name": "City A"
 		  },
 		  "ArrCity": {
 			"ID": 2,
-			"AirplaneName": "City B"
+			"Name": "City B"
 		  },
 		  "DepTime": "2023-06-28T14:00:00Z",
 		  "ArrTime": "2023-06-28T17:00:00Z",
-		  "Date": "2023-06-28",
+		  "date": "2023-06-28",
 		  "Airplane": {
 			"ID": 2,
-			"AirplaneName": "Airbus A320"
+			"airplane_name": "Airbus A320"
 		  },
-		  "Airline": "Airline Y",
+		  "airline": "Airline Y",
 		  "Price": 250,
 		  "CxlSitID": 456,
 		  "RemainingSeats": 30
@@ -203,12 +203,12 @@ func (suite *FlightTestSuite) TestFlight_SortAndFilter() {
 	  },
 	  "DepTime": "2023-06-28T10:00:00Z",
 	  "ArrTime": "2023-06-28T13:00:00Z",
-	  "Date": "2023-06-28",
+	  "date": "2023-06-28",
 	  "Airplane": {
 	"ID": 1,
-	"Name": "Boeing 737"
+	"airplane_name": "Boeing 737"
 	  },
-	  "Airline": "Airline X",
+	  "airline": "Airline X",
 	  "Price": 200,
 	  "CxlSitID": 123,
 	  "RemainingSeats": 50
@@ -225,12 +225,12 @@ func (suite *FlightTestSuite) TestFlight_SortAndFilter() {
 	  },
 	  "DepTime": "2023-06-28T14:00:00Z",
 	  "ArrTime": "2023-06-28T17:00:00Z",
-	  "Date": "2023-06-28",
+	  "date": "2023-06-28",
 	  "Airplane": {
 	"ID": 2,
-	"Name": "Airbus A320"
+	"airplane_name": "Airbus A320"
 	  },
-	  "Airline": "Airline Y",
+	  "airline": "Airline Y",
 	  "Price": 250,
 	  "CxlSitID": 456,
 	  "RemainingSeats": 30
