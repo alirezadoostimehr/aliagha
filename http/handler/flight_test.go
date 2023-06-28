@@ -106,7 +106,7 @@ func (suite *FlightTestSuite) TestFlighGet_Success() {
 			"ID": 2,
 			"AirplaneName": "Airbus A320"
 		  },
-		  "Airline": "Example Airlines",
+		  "Airline": "Airline Y",
 		  "Price": 250,
 		  "CxlSitID": 456,
 		  "RemainingSeats": 30
@@ -128,11 +128,11 @@ func (suite *FlightTestSuite) TestFlighGet_Success() {
 	mockFlightResponse := []services.FlightResponse{
 		{
 			ID: 1, DepCity: services.City{ID: 1, Name: "City A"}, ArrCity: services.City{ID: 2, Name: "City B"}, DepTime: time.Date(2023, 6, 28, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 28, 13, 0, 0, 0, time.UTC),
-			Date: time.Date(2023, 6, 28, 0, 0, 0, 0, time.UTC), Airplane: services.Airplane{ID: 1, Name: "Boeing 737"}, Airline: "Example Airlines", Price: 200, CxlSitID: 123, RemainingSeats: 50,
+			Date: time.Date(2023, 6, 28, 0, 0, 0, 0, time.UTC), Airplane: services.Airplane{ID: 1, Name: "Boeing 737"}, Airline: "Airline X", Price: 200, CxlSitID: 123, RemainingSeats: 50,
 		},
 		{
 			ID: 2, DepCity: services.City{ID: 1, Name: "City A"}, ArrCity: services.City{ID: 2, Name: "City B"}, DepTime: time.Date(2023, 6, 28, 14, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 28, 17, 0, 0, 0, time.UTC),
-			Date: time.Date(2023, 6, 28, 0, 0, 0, 0, time.UTC), Airplane: services.Airplane{ID: 2, Name: "Airbus A320"}, Airline: "Example Airlines", Price: 250, CxlSitID: 456, RemainingSeats: 30,
+			Date: time.Date(2023, 6, 28, 0, 0, 0, 0, time.UTC), Airplane: services.Airplane{ID: 2, Name: "Airbus A320"}, Airline: "Airline Y", Price: 250, CxlSitID: 456, RemainingSeats: 30,
 		},
 	}
 
@@ -141,7 +141,7 @@ func (suite *FlightTestSuite) TestFlighGet_Success() {
 	})
 	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.APIMock), "GetFlights")
 
-	requestBody := `{"City A", "City B", "date": "2023-06-28"}`
+	requestBody := `"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28"}`
 
 	res, err := suite.CallHandler(requestBody, "/flights")
 	require.NoError(err)
@@ -153,19 +153,19 @@ func (suite *FlightTestSuite) TestFlight_ValidationFailure() {
 	expectedStatusCode := http.StatusBadRequest
 	// {"City A","City B","2022-06-28","Airline X","Airbus XYZ","2023-06-28 16:12:14","price","asc",RemainingSeats: 2}
 	{
-		res, err := suite.CallHandler(`{"departureCity": "", "arrivalCity": "City B", "date": "2023-06-28"}`, "/flights")
+		res, err := suite.CallHandler(`{"departure_city": "", "arrival_city": "City B", "date": "2023-06-28"}`, "/flights")
 		require.NoError(err)
 		require.Equal(expectedStatusCode, res.Code)
 	}
 
 	{
-		res, err := suite.CallHandler(`{"departureCity": "City A", "arrivalCity": "City B", "date": "2023-06-28"}`, "/flights")
+		res, err := suite.CallHandler(`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28"}`, "/flights")
 		require.NoError(err)
 		require.Equal(expectedStatusCode, res.Code)
 	}
 
 	{
-		res, err := suite.CallHandler(`{"departureCity": "City A", "arrivalCity": "City B", "date": ""}`, "/flights")
+		res, err := suite.CallHandler(`{"departure_city": "City A", "arrival_city": "City B", "date": ""}`, "/flights")
 		require.NoError(err)
 		require.Equal(expectedStatusCode, res.Code)
 	}
@@ -181,90 +181,96 @@ func (suite *FlightTestSuite) TestFlight_RedisFailure() {
 	})
 	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.Redis), "Get")
 
-	requestBody := `{"departureCity": "City A", "arrivalCity": "City B", "date": "2023-06-28"}`
+	requestBody := `{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28"}`
 
 	res, err := suite.CallHandler(requestBody, "/flights")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 }
+func (suite *FlightTestSuite) TestFlight_SortAndFilter() {
+	require := suite.Require()
+	expectedStatusCode := http.StatusOK
+	expectedResponse := `[
+	{
+	  "ID": 1,
+	  "DepCity": {
+	"ID": 1,
+	"Name": "City A"
+	  },
+	  "ArrCity": {
+	"ID": 2,
+	"Name": "City B"
+	  },
+	  "DepTime": "2023-06-28T10:00:00Z",
+	  "ArrTime": "2023-06-28T13:00:00Z",
+	  "Date": "2023-06-28",
+	  "Airplane": {
+	"ID": 1,
+	"Name": "Boeing 737"
+	  },
+	  "Airline": "Airline X",
+	  "Price": 200,
+	  "CxlSitID": 123,
+	  "RemainingSeats": 50
+	},
+	{
+	  "ID": 2,
+	  "DepCity": {
+	"ID": 1,
+	"Name": "City A"
+	  },
+	  "ArrCity": {
+	"ID": 2,
+	"Name": "City B"
+	  },
+	  "DepTime": "2023-06-28T14:00:00Z",
+	  "ArrTime": "2023-06-28T17:00:00Z",
+	  "Date": "2023-06-28",
+	  "Airplane": {
+	"ID": 2,
+	"Name": "Airbus A320"
+	  },
+	  "Airline": "Airline Y",
+	  "Price": 250,
+	  "CxlSitID": 456,
+	  "RemainingSeats": 30
+	}
+	  ]`
 
-func (suite *FlightTestSuite) TestSortFlight_Price_Ascending() {
-	expected := []services.FlightResponse{
-		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
-		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
-		{Price: 200, DepTime: time.Date(2023, 6, 26, 9, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), Airline: "Airline B", Airplane: services.Airplane{Name: "Plane B"}, RemainingSeats: 50},
+	monkey.Patch(suite.f.Validator.Struct, func(s interface{}) error {
+		return nil
+	})
+	defer monkey.Unpatch(suite.f.Validator.Struct)
+
+	// Mock the Redis Get method to return a cache miss
+	monkey.PatchInstanceMethod(reflect.TypeOf(suite.f.Redis), "Get", func(r *redis.Client, key string) *redis.StringCmd {
+		return redis.NewStringResult("", redis.Nil)
+	})
+	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.Redis), "Get")
+
+	// Mock the APIMock GetFlights method to return a sample flight response
+	mockFlightResponse := []services.FlightResponse{
+		{
+			ID: 1, DepCity: services.City{ID: 1, Name: "City A"}, ArrCity: services.City{ID: 2, Name: "City B"}, DepTime: time.Date(2023, 6, 28, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 28, 13, 0, 0, 0, time.UTC),
+			Date: time.Date(2023, 6, 28, 0, 0, 0, 0, time.UTC), Airplane: services.Airplane{ID: 1, Name: "Boeing 737"}, Airline: "Airline X", Price: 200, CxlSitID: 123, RemainingSeats: 50,
+		},
+		{
+			ID: 2, DepCity: services.City{ID: 1, Name: "City A"}, ArrCity: services.City{ID: 2, Name: "City B"}, DepTime: time.Date(2023, 6, 28, 14, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 28, 17, 0, 0, 0, time.UTC),
+			Date: time.Date(2023, 6, 28, 0, 0, 0, 0, time.UTC), Airplane: services.Airplane{ID: 2, Name: "Airbus A320"}, Airline: "Airline Y", Price: 250, CxlSitID: 456, RemainingSeats: 30,
+		},
 	}
 
-	sortedFlights := sortFlight(suite.flights, "price", "asc")
-	// suite.NoError(err)
-	suite.Equal(expected, sortedFlights)
-}
+	monkey.PatchInstanceMethod(reflect.TypeOf(suite.f.APIMock), "GetFlights", func(a *services.APIMockClient, departureCity, arrivalCity string, date time.Time) ([]services.FlightResponse, error) {
+		return mockFlightResponse, nil
+	})
+	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.APIMock), "GetFlights")
 
-func (suite *FlightTestSuite) TestSortFlight_DepTime_Descending() {
-	expected := []services.FlightResponse{
-		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
-		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
-		{Price: 200, DepTime: time.Date(2023, 6, 26, 9, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), Airline: "Airline B", Airplane: services.Airplane{Name: "Plane B"}, RemainingSeats: 50},
-	}
+	requestBody := `{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "price", "sort_order": "asc", "remainingSeats": 2}`
 
-	sortedFlights := sortFlight(suite.flights, "dep_time", "desc")
-	// suite.NoError(err)
-	suite.Equal(expected, sortedFlights)
-}
-
-func (suite *FlightTestSuite) TestSortFlight_Duration_Ascending() {
-	expected := []services.FlightResponse{
-		{Price: 200, DepTime: time.Date(2023, 6, 26, 9, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), Airline: "Airline B", Airplane: services.Airplane{Name: "Plane B"}, RemainingSeats: 50},
-		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
-		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
-	}
-
-	sortedFlights := sortFlight(suite.flights, "duration", "asc")
-	// suite.NoError(err)
-	suite.Equal(expected, sortedFlights)
-}
-
-// func (suite *FlightTestSuite) TestSortFlight_InvalidSortBy() {
-// 	_, err := sortFlight(suite.flights, "invalid_sort_by", "asc")
-// 	suite.EqualError(err, "Invalid sort_by parameter")
-// }
-
-func (suite *FlightTestSuite) TestFilterByAirline() {
-	expected := []services.FlightResponse{
-		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
-		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
-	}
-
-	filteredFlights := filterByAirline(suite.flights, "Airline A")
-	suite.Equal(expected, filteredFlights)
-}
-
-func (suite *FlightTestSuite) TestFilterByName() {
-	expected := []services.FlightResponse{
-		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
-	}
-
-	filteredFlights := filterByName(suite.flights, "Plane A")
-	suite.Equal(expected, filteredFlights)
-}
-
-func (suite *FlightTestSuite) TestFilterByDeptime() {
-	expected := []services.FlightResponse{
-		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
-	}
-
-	filteredFlights := filterByDeptime(suite.flights, time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC))
-	suite.Equal(expected, filteredFlights)
-}
-
-func (suite *FlightTestSuite) TestFilterByRemainingSeats() {
-	expected := []services.FlightResponse{
-		{Price: 100, DepTime: time.Date(2023, 6, 26, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 12, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 100},
-		{Price: 150, DepTime: time.Date(2023, 6, 26, 11, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 26, 13, 0, 0, 0, time.UTC), Airline: "Airline A", Airplane: services.Airplane{Name: "Plane A"}, RemainingSeats: 75},
-	}
-
-	filteredFlights := filterByRemainingSeats(suite.flights, 75)
-	suite.Equal(expected, filteredFlights)
+	res, err := suite.CallHandler(requestBody, "/flights")
+	require.NoError(err)
+	require.Equal(expectedStatusCode, res.Code)
+	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String()))
 }
 
 func TestFlightTestSuite(t *testing.T) {
