@@ -25,9 +25,8 @@ payment_gateway:
 # Mock API configuration
 mock_api:
   url: https://mockapi.com/api
-  auth_key: myauthkey
-  auth_secret: myauthsecret
-  request_timeout: 1 * time.Second
+  api_key: myauthkey
+  timeout: 1 * time.Second
 # Security configuration
 security:
   secret_key: mysecretkey
