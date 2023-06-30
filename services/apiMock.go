@@ -20,17 +20,17 @@ type APIMockClient struct {
 }
 
 type FlightResponse struct {
-	ID             int32
-	DepCity        City
-	ArrCity        City
-	DepTime        time.Time
-	ArrTime        time.Time
-	Date           time.Time
-	Airplane       Airplane
-	Airline        string
-	Price          int32
-	CxlSitID       int32
-	RemainingSeats int32
+	ID             int32     `json:"id"`
+	DepCity        City      `json:"dep_city"`
+	ArrCity        City      `json:"arr_city"`
+	DepTime        time.Time `json:"dep_time"`
+	ArrTime        time.Time `json:"arr_time"`
+	Date           time.Time `json:"date"`
+	Airplane       Airplane  `json:"airplane"`
+	Airline        string    `json:"airline"`
+	Price          int32     `json:"price"`
+	CxlSitID       int32     `json:"cxl_sit_id"`
+	RemainingSeats int32     `json:"remaining_seats"`
 }
 
 type City struct {

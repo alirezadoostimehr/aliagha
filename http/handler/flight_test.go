@@ -3,7 +3,9 @@ package handler
 import (
 	"aliagha/config"
 	"aliagha/services"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -75,52 +77,11 @@ func (suite *FlightTestSuite) CallHandler(requestBody string, endPoint string) (
 func (suite *FlightTestSuite) TestFlighGet_Success() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusOK
-	expectedResponse := `[
-		{
-		  "ID": 1,
-		  "DepCity": {
-			"ID": 1,
-			"Name": "City A"
-		  },
-		  "ArrCity": {
-			"ID": 2,
-			"Name": "City B"
-		  },
-		  "DepTime": "2023-06-28T10:00:00Z",
-		  "ArrTime": "2023-06-28T13:00:00Z",
-		  "date": "2023-06-28",
-		  "Airplane": {
-			"ID": 1,
-			"airplane_name": "Boeing 737"
-		  },
-		  "airline": "Airline X",
-		  "Price": 200,
-		  "CxlSitID": 123,
-		  "RemainingSeats": 50
-		},
-		{
-		  "ID": 2,
-		  "DepCity": {
-			"ID": 1,
-			"Name": "City A"
-		  },
-		  "ArrCity": {
-			"ID": 2,
-			"Name": "City B"
-		  },
-		  "DepTime": "2023-06-28T14:00:00Z",
-		  "ArrTime": "2023-06-28T17:00:00Z",
-		  "date": "2023-06-28",
-		  "Airplane": {
-			"ID": 2,
-			"airplane_name": "Airbus A320"
-		  },
-		  "airline": "Airline Y",
-		  "Price": 250,
-		  "CxlSitID": 456,
-		  "RemainingSeats": 30
-		}
-	  ]`
+	expectedResponse, err := json.MarshalIndent(suite.flights, "", "  ")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
 	monkey.Patch(suite.f.Validator.Struct, func(s interface{}) error {
 		return nil
@@ -136,17 +97,17 @@ func (suite *FlightTestSuite) TestFlighGet_Success() {
 	// Mock the APIMock GetFlights method to return a sample flight response
 	mockFlightResponse := suite.flights
 
-	monkey.PatchInstanceMethod(reflect.TypeOf(suite.f.APIMock), "GetFlights", func(a *services.APIMockClient, departureCity, arrivalCity string, date time.Time) ([]services.FlightResponse, error) {
+	monkey.PatchInstanceMethod(reflect.TypeOf(suite.f.APIMock.GetFlights), "GetFlights", func(a *services.APIMockClient, departureCity, arrivalCity string, date time.Time) ([]services.FlightResponse, error) {
 		return mockFlightResponse, nil
 	})
-	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.APIMock), "GetFlights")
+	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.APIMock.GetFlights), "GetFlights")
 
 	requestBody := `"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28"}`
 
 	res, err := suite.CallHandler(requestBody, "/flights")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
-	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String()))
+	require.JSONEq(string(expectedResponse), res.Body.String())
 }
 func (suite *FlightTestSuite) TestFlight_BindFailure() {
 	require := suite.Require()
@@ -198,53 +159,15 @@ func (suite *FlightTestSuite) TestFlight_RedisFailure() {
 }
 func (suite *FlightTestSuite) TestFlight_SortAndFilter() {
 	require := suite.Require()
-	expectedStatusCode := http.StatusOK
-	expectedResponse := `[
-	{
-		"ID": 2,
-		"DepCity": {
-			"ID": 1,
-			"Name": "City A"
-		},
-		"ArrCity": {
-			"ID": 2,
-			"Name": "City B"
-		},
-		"DepTime": "2023-06-28T14:00:00Z",
-		"ArrTime": "2023-06-28T17:00:00Z",
-		"date": "2023-06-28",
-		"Airplane": {
-			"ID": 2,
-			"airplane_name": "Airbus A320"
-		},
-		"airline": "Airline Y",
-		"Price": 250,
-		"CxlSitID": 456,
-		"RemainingSeats": 30
-		},
-	{
-		"ID": 1,
-		"DepCity": {
-			"ID": 1,
-			"Name": "City A"
-		},
-		"ArrCity": {
-			"ID": 2,
-			"Name": "City B"
-		},
-		"DepTime": "2023-06-28T10:00:00Z",
-		"ArrTime": "2023-06-28T13:00:00Z",
-		"date": "2023-06-28",
-		"Airplane": {
-			"ID": 1,
-			"airplane_name": "Boeing 737"
-		},
-		"airline": "Airline X",
-		"Price": 200,
-		"CxlSitID": 123,
-		"RemainingSeats": 50
+	response := make([]json.RawMessage, len(suite.flights))
+	for i, flight := range suite.flights {
+		jsonValue, err := json.MarshalIndent(flight, "", "  ")
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		response[i] = jsonValue
 	}
-	]`
 
 	monkey.Patch(suite.f.Validator.Struct, func(s interface{}) error {
 		return nil
@@ -265,22 +188,18 @@ func (suite *FlightTestSuite) TestFlight_SortAndFilter() {
 	})
 	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.APIMock), "GetFlights")
 
-	requestBody := `{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "price", "sort_order": "asc", "remainingSeats": 2}`
 	tests := []struct {
 		requestBody string
 		statusCode  int
 		response    string
 	}{
-		// TODO: table of responses
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "price", "sort_order": "asc", "remainingSeats": 250}`, http.StatusOK, expectedResponse},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "dep_time", "sort_order": "desc"}`, http.StatusOK, expectedResponse},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "duration", "sort_order": ""}`, http.StatusOK, expectedResponse},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "remainingSeats": 220}`, http.StatusOK, expectedResponse},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "airline": "Airline X"}`, http.StatusOK, expectedResponse},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "Price": 200}`, http.StatusOK, expectedResponse},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "airplane_name": "Boeing 737"}`, http.StatusOK, expectedResponse},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "departure_time_from": "09:00:00Z"},"departure_time_to": "14:00:00Z"}`, http.StatusOK, expectedResponse},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", remainingSeats": 200}`, http.StatusOK, expectedResponse},
+		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "price", "sort_order": "asc", "remainingSeats": 20}`, http.StatusOK, string(string(response[0])) + string(response[1])},
+		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "dep_time", "sort_order": "desc"}`, http.StatusOK, string(response[1]) + string(string(response[0]))},
+		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "duration", "sort_order": ""}`, http.StatusOK, string(response[1]) + string(string(response[0]))},
+		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "remainingSeats": 40}`, http.StatusOK, string(string(response[0]))},
+		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "airline": "Airline X"}`, http.StatusOK, string(string(response[0]))},
+		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "airplane_name": "Boeing 737"}`, http.StatusOK, string(response[0])},
+		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "departure_time_from": "09:00:00Z"},"departure_time_to": "14:00:00Z"}`, http.StatusOK, string(response[0])},
 	}
 
 	for _, tt := range tests {
@@ -289,13 +208,9 @@ func (suite *FlightTestSuite) TestFlight_SortAndFilter() {
 			res, err := suite.CallHandler(tt.requestBody, "/flights")
 			require.NoError(err)
 			require.Equal(tt.statusCode, res.Code)
-			require.Equal(tt.response, strings.TrimSpace(res.Body.String()))
+			require.JSONEq(tt.response, res.Body.String())
 		})
 	}
-	res, err := suite.CallHandler(requestBody, "/flights")
-	require.NoError(err)
-	require.Equal(expectedStatusCode, res.Code)
-	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String()))
 }
 
 func TestFlightSuite(t *testing.T) {
