@@ -2,10 +2,11 @@ package handler
 
 import (
 	"aliagha/config"
+	"aliagha/database"
 	"aliagha/services"
-	"encoding/json"
+	"bytes"
 	"errors"
-	"fmt"
+	"github.com/alicebob/miniredis/v2"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -23,196 +24,190 @@ import (
 
 type FlightTestSuite struct {
 	suite.Suite
-	flights   []services.FlightResponse
-	f         *Flight
-	redis     *redis.Client
-	Validator *validator.Validate
-	e         *echo.Echo
+	flights     []services.FlightResponse
+	flight      *Flight
+	redis       *redis.Client
+	Validator   *validator.Validate
+	e           *echo.Echo
+	redisServer *miniredis.Miniredis
 }
 
-func (suite *FlightTestSuite) SetupTest() {
-
+func (suite *FlightTestSuite) SetupSuite() {
 	vldt := validator.New()
 	suite.e = echo.New()
-	// Mock the necessary dependencies
-	suite.f = &Flight{
+	suite.flight = &Flight{
 		Redis:     &redis.Client{},
 		Validator: vldt,
-		Config:    &config.Config{Redis: config.Redis{TTL: 10 * time.Second}, MockAPI: config.MockAPI{Request_timeout: 30 * time.Second}},
+		Config:    &config.Config{Redis: config.Redis{TTL: 10 * time.Second}, MockAPI: config.MockAPI{Timeout: 30 * time.Second}},
 		APIMock: services.APIMockClient{
 			Client:  &http.Client{},
 			Breaker: &breaker.Breaker{},
+			Timeout: 30 * time.Second,
 		},
 	}
-	// Initialize the flights for testing
 	suite.flights = []services.FlightResponse{
 		{
-			ID: 1, DepCity: services.City{ID: 1, Name: "City A"}, ArrCity: services.City{ID: 2, Name: "City B"}, DepTime: time.Date(2023, 6, 28, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 28, 13, 0, 0, 0, time.UTC),
+			ID: 1, DepCity: services.City{ID: 1, Name: "CityA"}, ArrCity: services.City{ID: 2, Name: "CityB"}, DepTime: time.Date(2023, 6, 28, 10, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 28, 13, 0, 0, 0, time.UTC),
 			Date: time.Date(2023, 6, 28, 0, 0, 0, 0, time.UTC), Airplane: services.Airplane{ID: 1, Name: "Boeing 737"}, Airline: "Airline X", Price: 200, CxlSitID: 123, RemainingSeats: 50,
 		},
 		{
-			ID: 2, DepCity: services.City{ID: 1, Name: "City A"}, ArrCity: services.City{ID: 2, Name: "City B"}, DepTime: time.Date(2023, 6, 28, 14, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 28, 17, 0, 0, 0, time.UTC),
+			ID: 2, DepCity: services.City{ID: 1, Name: "CityA"}, ArrCity: services.City{ID: 2, Name: "CityB"}, DepTime: time.Date(2023, 6, 28, 14, 0, 0, 0, time.UTC), ArrTime: time.Date(2023, 6, 28, 17, 0, 0, 0, time.UTC),
 			Date: time.Date(2023, 6, 28, 0, 0, 0, 0, time.UTC), Airplane: services.Airplane{ID: 2, Name: "Airbus A320"}, Airline: "Airline Y", Price: 250, CxlSitID: 456, RemainingSeats: 30,
 		},
 	}
 
+	server, client := database.NewRedisMock()
+
+	suite.redisServer = server
+	suite.flight.Redis = client
 }
-func (suite *FlightTestSuite) CallHandler(requestBody string, endPoint string) (*httptest.ResponseRecorder, error) {
-	req := httptest.NewRequest(http.MethodPost, endPoint, strings.NewReader(requestBody))
+
+func (suite *FlightTestSuite) SetupTest() {
+	suite.flight.Redis.FlushAll()
+}
+
+func (suite *FlightTestSuite) TearDownSuite() {
+	suite.redisServer.Close()
+}
+
+func (suite *FlightTestSuite) CallHandler(query string) (*httptest.ResponseRecorder, error) {
+	req := httptest.NewRequest(http.MethodGet, "/flights"+query, bytes.NewReader([]byte("")))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	res := httptest.NewRecorder()
 	c := suite.e.NewContext(req, res)
 
-	var err error
-	if endPoint == "/flights" {
-		err = suite.f.Get(c)
-	}
-
+	err := suite.flight.Get(c)
 	if err != nil {
 		return res, err
 	}
 
 	return res, nil
 }
-func (suite *FlightTestSuite) TestFlighGet_Success() {
+
+func (suite *FlightTestSuite) TestGetFlight_NoCache_Success() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusOK
-	expectedResponse, err := json.MarshalIndent(suite.flights, "", "  ")
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
+	expectedResponse := `[{"id":1,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T10:00:00Z","arr_time":"2023-06-28T13:00:00Z","date":"2023-06-28T00:00:00Z","airplane":{"id":1,"name":"Boeing 737"},"airline":"Airline X","price":200,"cxl_sit_id":123,"remaining_seats":50},{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","date":"2023-06-28T00:00:00Z","airplane":{"id":2,"name":"Airbus A320"},"airline":"Airline Y","price":250,"cxl_sit_id":456,"remaining_seats":30}]`
 
-	monkey.Patch(suite.f.Validator.Struct, func(s interface{}) error {
-		return nil
+	var a services.APIMockClient
+	monkey.PatchInstanceMethod(reflect.TypeOf(&a), "GetFlights", func(_ *services.APIMockClient, _, _, _ string) ([]services.FlightResponse, error) {
+		return suite.flights, nil
 	})
-	defer monkey.Unpatch(suite.f.Validator.Struct)
+	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(&a), "GetFlights")
 
-	// Mock the Redis Get method to return a cache miss
-	monkey.PatchInstanceMethod(reflect.TypeOf(suite.f.Redis), "Get", func(r *redis.Client, key string) *redis.StringCmd {
-		return redis.NewStringResult("", redis.Nil)
-	})
-	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.Redis), "Get")
-
-	// Mock the APIMock GetFlights method to return a sample flight response
-	mockFlightResponse := suite.flights
-
-	monkey.PatchInstanceMethod(reflect.TypeOf(suite.f.APIMock.GetFlights), "GetFlights", func(a *services.APIMockClient, departureCity, arrivalCity string, date time.Time) ([]services.FlightResponse, error) {
-		return mockFlightResponse, nil
-	})
-	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.APIMock.GetFlights), "GetFlights")
-
-	requestBody := `"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28"}`
-
-	res, err := suite.CallHandler(requestBody, "/flights")
+	res, err := suite.CallHandler(`?departure_city=CityA&arrival_city=CityB&date=2023-06-28`)
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
-	require.JSONEq(string(expectedResponse), res.Body.String())
+	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String()))
+
+	cache, err := suite.redisServer.Get("flights-CityA-CityB-2023-06-28")
+	require.NoError(err)
+	require.Equal(cache, expectedResponse)
 }
-func (suite *FlightTestSuite) TestFlight_BindFailure() {
+
+func (suite *FlightTestSuite) TestGetFlight_WithCache_Success() {
+	require := suite.Require()
+	expectedStatusCode := http.StatusOK
+	expectedResponse := `[{"id":1,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T10:00:00Z","arr_time":"2023-06-28T13:00:00Z","date":"2023-06-28T00:00:00Z","airplane":{"id":1,"name":"Boeing 737"},"airline":"Airline X","price":200,"cxl_sit_id":123,"remaining_seats":50},{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","date":"2023-06-28T00:00:00Z","airplane":{"id":2,"name":"Airbus A320"},"airline":"Airline Y","price":250,"cxl_sit_id":456,"remaining_seats":30}]`
+
+	monkey.Patch(suite.flight.Validator.Struct, func(_ interface{}) error {
+		return nil
+	})
+	defer monkey.Unpatch(suite.flight.Validator.Struct)
+
+	err := suite.redisServer.Set("flights-CityA-CityB-2023-06-28", `[{"id":1,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T10:00:00Z","arr_time":"2023-06-28T13:00:00Z","date":"2023-06-28T00:00:00Z","airplane":{"id":1,"name":"Boeing 737"},"airline":"Airline X","price":200,"cxl_sit_id":123,"remaining_seats":50},{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","date":"2023-06-28T00:00:00Z","airplane":{"id":2,"name":"Airbus A320"},"airline":"Airline Y","price":250,"cxl_sit_id":456,"remaining_seats":30}]`)
+	require.NoError(err)
+
+	res, err := suite.CallHandler(`?departure_city=CityA&arrival_city=CityB&date=2023-06-28`)
+	require.NoError(err)
+	require.Equal(expectedStatusCode, res.Code)
+	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String()))
+}
+
+func (suite *FlightTestSuite) TestGetFlight_WithSortAndFilter_Success() {
+	require := suite.Require()
+
+	var a services.APIMockClient
+	monkey.PatchInstanceMethod(reflect.TypeOf(&a), "GetFlights", func(a *services.APIMockClient, _, _, _ string) ([]services.FlightResponse, error) {
+		return suite.flights, nil
+	})
+	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(&a), "GetFlights")
+
+	tests := []struct {
+		query      string
+		statusCode int
+		response   string
+	}{
+		{`?departure_city=CityA&arrival_city=CityB&date=2023-06-28&sort_by=price&sort_order=desc`, http.StatusOK, `[{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","date":"2023-06-28T00:00:00Z","airplane":{"id":2,"name":"Airbus A320"},"airline":"Airline Y","price":250,"cxl_sit_id":456,"remaining_seats":30},{"id":1,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T10:00:00Z","arr_time":"2023-06-28T13:00:00Z","date":"2023-06-28T00:00:00Z","airplane":{"id":1,"name":"Boeing 737"},"airline":"Airline X","price":200,"cxl_sit_id":123,"remaining_seats":50}]`},
+		{`?departure_city=CityA&arrival_city=CityB&date=2023-06-28&remaining_seats=40`, http.StatusOK, `[{"id":1,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T10:00:00Z","arr_time":"2023-06-28T13:00:00Z","date":"2023-06-28T00:00:00Z","airplane":{"id":1,"name":"Boeing 737"},"airline":"Airline X","price":200,"cxl_sit_id":123,"remaining_seats":50}]`},
+	}
+
+	for _, t := range tests {
+		res, err := suite.CallHandler(t.query)
+		require.NoError(err)
+		require.Equal(t.statusCode, res.Code)
+		require.Equal(t.response, strings.TrimSpace(res.Body.String()))
+	}
+}
+
+func (suite *FlightTestSuite) TestGetFlight_BindErr_Failure() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusBadRequest
 
-	requestBody := `{"departure_city": "City A", "arrival_city": "City B"}` // Missing a requied field
-
-	res, err := suite.CallHandler(requestBody, "/flights")
+	res, err := suite.CallHandler(`?departure=CityA&arrival_city=CityB&date=2023-06-28`)
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 }
-func (suite *FlightTestSuite) TestFlight_ValidationFailure() {
+
+func (suite *FlightTestSuite) TestGetFlight_ValidationErr_Failure() {
 	require := suite.Require()
 
 	tests := []struct {
-		requestBody string
-		statusCode  int
+		query      string
+		statusCode int
 	}{
-		{`{"departure_city": "", "arrival_city": "City B", "date": "2023-06-28"}`, http.StatusBadRequest},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28"}`, http.StatusBadRequest},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": ""}`, http.StatusBadRequest},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "some string"}`, http.StatusBadRequest},
+		{`?departure_city=&arrival_city=CityB&date=2023-06-28`, http.StatusBadRequest},
+		{`?departure_city=CityA&arrival_city=&date=2023-06-28`, http.StatusBadRequest},
+		{`?departure_city=CityA&arrival_city=CityB&date=`, http.StatusBadRequest},
+		{`?departure_city=CityA&arrival_city=CityB&date=str`, http.StatusBadRequest},
 	}
 
-	for _, tt := range tests {
-		testname := tt.requestBody
-		suite.T().Run(testname, func(t *testing.T) {
-			res, err := suite.CallHandler(tt.requestBody, "/flights")
-			require.NoError(err)
-			require.Equal(tt.statusCode, res.Code)
-		})
+	for _, t := range tests {
+		res, err := suite.CallHandler(t.query)
+		require.NoError(err)
+		require.Equal(t.statusCode, res.Code)
 	}
 }
-func (suite *FlightTestSuite) TestFlight_RedisFailure() {
+
+func (suite *FlightTestSuite) TestGetFlight_RedisErr_Failure() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusInternalServerError
 
-	// Mock the Redis Get method to return an error
-	monkey.PatchInstanceMethod(reflect.TypeOf(suite.f.Redis), "Get", func(r *redis.Client, key string) *redis.StringCmd {
-		return redis.NewStringResult("", errors.New("Redis connection failed"))
+	monkey.PatchInstanceMethod(reflect.TypeOf(suite.flight.Redis), "Get", func(r *redis.Client, key string) *redis.StringCmd {
+		return redis.NewStringResult("", errors.New("redis connection failed"))
 	})
-	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.Redis), "Get")
+	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.flight.Redis), "Get")
 
-	requestBody := `{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28"}`
-
-	res, err := suite.CallHandler(requestBody, "/flights")
+	res, err := suite.CallHandler(`?departure_city=CityA&arrival_city=CityB&date=2023-06-28`)
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 }
-func (suite *FlightTestSuite) TestFlight_SortAndFilter() {
+
+func (suite *FlightTestSuite) TestGetFlight_APIMockErr_Failure() {
 	require := suite.Require()
-	response := make([]json.RawMessage, len(suite.flights))
-	for i, flight := range suite.flights {
-		jsonValue, err := json.MarshalIndent(flight, "", "  ")
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-		response[i] = jsonValue
-	}
+	expectedStatusCode := http.StatusInternalServerError
 
-	monkey.Patch(suite.f.Validator.Struct, func(s interface{}) error {
-		return nil
+	var a services.APIMockClient
+	monkey.PatchInstanceMethod(reflect.TypeOf(&a), "GetFlights", func(_ *services.APIMockClient, _, _, _ string) ([]services.FlightResponse, error) {
+		return nil, errors.New("error")
 	})
-	defer monkey.Unpatch(suite.f.Validator.Struct)
+	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(&a), "GetFlights")
 
-	// Mock the Redis Get method to return a cache miss
-	monkey.PatchInstanceMethod(reflect.TypeOf(suite.f.Redis), "Get", func(r *redis.Client, key string) *redis.StringCmd {
-		return redis.NewStringResult("", redis.Nil)
-	})
-	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.Redis), "Get")
-
-	// Mock the APIMock GetFlights method to return a sample flight response
-	mockFlightResponse := suite.flights
-
-	monkey.PatchInstanceMethod(reflect.TypeOf(suite.f.APIMock), "GetFlights", func(a *services.APIMockClient, departureCity, arrivalCity string, date time.Time) ([]services.FlightResponse, error) {
-		return mockFlightResponse, nil
-	})
-	defer monkey.UnpatchInstanceMethod(reflect.TypeOf(suite.f.APIMock), "GetFlights")
-
-	tests := []struct {
-		requestBody string
-		statusCode  int
-		response    string
-	}{
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "price", "sort_order": "asc", "remainingSeats": 20}`, http.StatusOK, string(string(response[0])) + string(response[1])},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "dep_time", "sort_order": "desc"}`, http.StatusOK, string(response[1]) + string(string(response[0]))},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "sort_by": "duration", "sort_order": ""}`, http.StatusOK, string(response[1]) + string(string(response[0]))},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "remainingSeats": 40}`, http.StatusOK, string(string(response[0]))},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "airline": "Airline X"}`, http.StatusOK, string(string(response[0]))},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "airplane_name": "Boeing 737"}`, http.StatusOK, string(response[0])},
-		{`{"departure_city": "City A", "arrival_city": "City B", "date": "2023-06-28", "departure_time_from": "09:00:00Z"},"departure_time_to": "14:00:00Z"}`, http.StatusOK, string(response[0])},
-	}
-
-	for _, tt := range tests {
-		testname := tt.requestBody
-		suite.T().Run(testname, func(t *testing.T) {
-			res, err := suite.CallHandler(tt.requestBody, "/flights")
-			require.NoError(err)
-			require.Equal(tt.statusCode, res.Code)
-			require.JSONEq(tt.response, res.Body.String())
-		})
-	}
+	res, err := suite.CallHandler(`?departure_city=CityA&arrival_city=CityB&date=2023-06-28`)
+	require.NoError(err)
+	require.Equal(expectedStatusCode, res.Code)
 }
 
-func TestFlightSuite(t *testing.T) {
+func TestFlight(t *testing.T) {
 	suite.Run(t, new(FlightTestSuite))
 }

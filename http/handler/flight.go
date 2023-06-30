@@ -3,6 +3,7 @@ package handler
 import (
 	"aliagha/config"
 	"aliagha/services"
+	"aliagha/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,37 +22,76 @@ type Flight struct {
 	APIMock   services.APIMockClient
 }
 
-type GetRequest struct {
-	DepartureCity  string    `query:"departure_city" validate:"required"`
-	ArrivalCity    string    `query:"arrival_city" validate:"required"`
-	Date           time.Time `query:"date" validate:"required,datetime"`
-	Airline        string    `query:"airline"`
-	AirplaneName   string    `query:"airplane_name"`
-	DeptimeFrom    time.Time `query:"departure_time_from" validate:"datetime"`
-	DeptimeTo      time.Time `query:"departure_time_to" validate:"datetime"`
-	SortBy         string    `query:"sort_by"`
-	SortOrder      string    `query:"sort_order"`
-	RemainingSeats int32     `query:"remaining_seats"`
+type GetFlightsRequest struct {
+	DepartureCity  string `query:"departure_city" validate:"required"`
+	ArrivalCity    string `query:"arrival_city" validate:"required"`
+	FlightDate     string `query:"date" validate:"required"`
+	FDate          time.Time
+	Airline        string `query:"airline"`
+	AirplaneName   string `query:"airplane_name"`
+	DeptimeFrom    string `query:"departure_time_from" validate:"datetime"`
+	DepTimeF       time.Time
+	DeptimeTo      string `query:"departure_time_to" validate:"datetime"`
+	DeptimeT       time.Time
+	SortBy         string `query:"sort_by"`
+	SortOrder      string `query:"sort_order"`
+	RemainingSeats int32  `query:"remaining_seats"`
+}
+
+func (req *GetFlightsRequest) Normalize() error {
+	if req.FlightDate != "" {
+		date, err := utils.ParseDate(req.FlightDate)
+		if err != nil {
+			return err
+		}
+
+		req.FDate = date
+	}
+
+	if req.DeptimeFrom != "" {
+		date, err := utils.ParseDate(req.DeptimeFrom)
+		if err != nil {
+			return err
+		}
+
+		req.DepTimeF = date
+	}
+
+	if req.DeptimeTo != "" {
+		date, err := utils.ParseDate(req.DeptimeTo)
+		if err != nil {
+			return err
+		}
+
+		req.DeptimeT = date
+	}
+
+	return nil
 }
 
 func (f *Flight) Get(ctx echo.Context) error {
-	var req GetRequest
+	var req GetFlightsRequest
 	if err := ctx.Bind(&req); err != nil {
-		return ctx.JSON(http.StatusBadRequest, "")
+		fmt.Println(err)
+		return ctx.NoContent(http.StatusBadRequest)
 	}
 
 	if err := f.Validator.Struct(&req); err != nil {
 		return ctx.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	cacheKey := fmt.Sprintf("%s-%s-%s", req.DepartureCity, req.ArrivalCity, req.Date.Format("2003-02-01"))
+	if err := req.Normalize(); err != nil {
+		return ctx.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	cacheKey := fmt.Sprintf("flights-%s-%s-%s", req.DepartureCity, req.ArrivalCity, req.FlightDate)
 	cacheResult, err := f.Redis.Get(cacheKey).Bytes()
 
 	var flights []services.FlightResponse
 	if err != nil && err != redis.Nil {
 		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
 	} else if err == redis.Nil {
-		apiResult, err := f.APIMock.GetFlights(req.DepartureCity, req.ArrivalCity, req.Date)
+		apiResult, err := f.APIMock.GetFlights(req.DepartureCity, req.ArrivalCity, req.FlightDate)
 		if err != nil {
 			return ctx.JSON(http.StatusInternalServerError, "Internal Sever Error")
 		}
@@ -79,11 +119,11 @@ func (f *Flight) Get(ctx echo.Context) error {
 	}
 
 	if req.AirplaneName != "" {
-		flights = filterByName(flights, req.AirplaneName)
+		flights = filterByAirplaneName(flights, req.AirplaneName)
 	}
 
-	if req.DeptimeFrom.Format("2003-02-01") != "" && req.DeptimeTo.Format("2003-02-01") != "" {
-		flights = filterByDeptime(flights, req.DeptimeFrom, req.DeptimeTo)
+	if req.DeptimeFrom != "" && req.DeptimeTo != "" {
+		flights = filterByDeptime(flights, req.DepTimeF, req.DeptimeT)
 	}
 
 	if req.RemainingSeats > 0 {
@@ -151,10 +191,10 @@ func filterByAirline(flights []services.FlightResponse, airline string) []servic
 	return filteredFlights
 }
 
-func filterByName(flights []services.FlightResponse, name string) []services.FlightResponse {
+func filterByAirplaneName(flights []services.FlightResponse, airplaneName string) []services.FlightResponse {
 	var filteredFlights []services.FlightResponse
 	for _, flight := range flights {
-		if flight.Airplane.Name == name {
+		if flight.Airplane.Name == airplaneName {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}

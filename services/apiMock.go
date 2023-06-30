@@ -34,17 +34,17 @@ type FlightResponse struct {
 }
 
 type City struct {
-	ID   int32
-	Name string
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
 }
 
 type Airplane struct {
-	ID   int32
-	Name string
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
 }
 
-func (c *APIMockClient) GetFlights(depCity, arrCity string, date time.Time) ([]FlightResponse, error) {
-	url := c.BaseURL + "/flights" + fmt.Sprintf("?departure_city=%s&arrival_city%s&date=%s", depCity, arrCity, date.Format("2003-02-01"))
+func (c *APIMockClient) GetFlights(depCity, arrCity, date string) ([]FlightResponse, error) {
+	url := c.BaseURL + "/flights" + fmt.Sprintf("?departure_city=%s&arrival_city%s&date=%s", depCity, arrCity, date)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

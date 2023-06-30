@@ -46,10 +46,9 @@ type PaymentGateway struct {
 }
 
 type MockAPI struct {
-	URL             string
-	AuthKey         string
-	AuthSecret      string
-	Request_timeout time.Duration
+	URL     string
+	ApiKey  string
+	Timeout time.Duration
 }
 
 type Security struct {
@@ -104,10 +103,9 @@ func Init(param Params) (*Config, error) {
 	}
 
 	mockAPI := &MockAPI{
-		URL:             viper.GetString("mock_api.url"),
-		AuthKey:         viper.GetString("mock_api.auth_key"),
-		AuthSecret:      viper.GetString("mock_api.auth_secret"),
-		Request_timeout: viper.GetDuration("mock_api.request_timeout"),
+		URL:     viper.GetString("mock_api.url"),
+		ApiKey:  viper.GetString("mock_api.api_key"),
+		Timeout: viper.GetDuration("mock_api.timeout"),
 	}
 
 	security := &Security{

@@ -63,7 +63,8 @@ func startServer() {
 		Client:  &http.Client{},
 		Breaker: &breaker.Breaker{},
 		BaseURL: cfg.MockAPI.URL,
-		APIKey:  cfg.MockAPI.AuthKey,
+		APIKey:  cfg.MockAPI.ApiKey,
+		Timeout: cfg.MockAPI.Timeout,
 	}
 
 	flight := handler.Flight{Redis: redis, Validator: vldt, Config: cfg, APIMock: mockClient}
