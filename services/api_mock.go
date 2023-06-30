@@ -19,6 +19,7 @@ type APIMockClient struct {
 	Timeout time.Duration
 }
 
+// TODO: remove date
 type FlightResponse struct {
 	ID             int32     `json:"id"`
 	DepCity        City      `json:"dep_city"`

@@ -137,6 +137,7 @@ func (f *Flight) Get(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, flights)
 }
 
+// TODO: cover with unit tests
 func sortFlight(flights []services.FlightResponse, sortBy, sortOrder string) []services.FlightResponse {
 	if sortOrder == "" {
 		sortOrder = "asc"

@@ -59,6 +59,7 @@ func startServer() {
 
 	e := echo.New()
 
+	//TODO: remove apikey
 	mockClient := services.APIMockClient{
 		Client:  &http.Client{},
 		Breaker: &breaker.Breaker{},
