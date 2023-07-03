@@ -4,14 +4,10 @@ import (
 	"aliagha/config"
 	"aliagha/database"
 	"aliagha/http/handler"
-<<<<<<< HEAD
 	"aliagha/services"
 	"net/http"
 
 	"github.com/eapache/go-resiliency/breaker"
-=======
-
->>>>>>> add register process and related tests
 	"github.com/go-playground/validator/v10"
 
 	"github.com/labstack/echo/v4"

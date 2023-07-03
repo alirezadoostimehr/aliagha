@@ -132,7 +132,7 @@ func (u *User) Register(ctx echo.Context) error {
 		return ctx.JSON(http.StatusInternalServerError, "Internal server error")
 	}
 
-	return ctx.JSON(http.StatusOK, RegisterResponse{
+	return ctx.JSON(http.StatusCreated, RegisterResponse{
 		Message: "User created successfully",
 		Token:   token,
 	})

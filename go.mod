@@ -4,10 +4,9 @@ go 1.20
 
 require (
 	bou.ke/monkey v1.0.2
-	github.com/alicebob/miniredis/v2 v2.30.3
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/eapache/go-resiliency v1.3.0
 	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/alicebob/miniredis/v2 v2.30.3
+	github.com/eapache/go-resiliency v1.3.0
 	github.com/go-playground/validator/v10 v10.14.1
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/spf13/cobra v1.7.0

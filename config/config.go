@@ -134,8 +134,3 @@ func Init(param Params) (*Config, error) {
 		JWT:            *jwt,
 	}, nil
 }
-
-func GetJWTSecret() string {
-	// Read the JWT secret key from your configuration
-	return configInstance.JWT.SecretKey
-}
