@@ -4,6 +4,7 @@ import (
 	"aliagha/config"
 	"aliagha/database"
 	"aliagha/http/handler"
+
 	"github.com/go-playground/validator/v10"
 
 	"github.com/labstack/echo/v4"
@@ -35,7 +36,6 @@ func init() {
 }
 
 func startServer() {
-	//todo: get config path as a flag
 	cfg, err := config.Init(config.Params{FilePath: serveConfigPath, FileType: "yaml"})
 	if err != nil {
 		panic(err)
@@ -60,6 +60,10 @@ func startServer() {
 
 	user := handler.User{DB: db, JWT: &cfg.JWT, Validator: vldt}
 	e.POST("/user/login", user.Login)
+
+	passenger := handler.Passenger{DB: db, Validator: vldt}
+	e.POST("/passenger/create", passenger.CreatePassenger, middleware.AuthMiddleware(cfg.JWT.SecretKey))
+	e.GET("/passenger/list", passenger.GetPassengers)
 
 	e.Start("localhost:3030")
 }
