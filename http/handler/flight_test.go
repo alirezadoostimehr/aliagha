@@ -274,9 +274,8 @@ func (suite *FlightTestSuite) TestGetFlight_FilterByDeptime_Success() {
 		statusCode int
 		response   string
 	}{
-		{`?departure_city=CityA&arrival_city=CityB&date=2023-06-28&departure_time_from=2023-06-28T09:00:00Z&departure_time_to=2023-06-28T15:00:00Z`, http.StatusOK, `[{"id":1,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T10:00:00Z","arr_time":"2023-06-28T13:00:00Z","airplane":{"id":1,"name":"Boeing737"},"airline":"AirlineX","price":200,"cxl_sit_id":123,"remaining_seats":50},{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","airplane":{"id":2,"name":"AirbusA320"},"airline":"AirlineY","price":250,"cxl_sit_id":456,"remaining_seats":30}]`},
-
-		{`?departure_city=CityA&arrival_city=CityB&date=2023-06-28&departure_time_from=2023-06-28T12:00:00Z&departure_time_to=2023-06-28T15:00:00Z`, http.StatusOK, `[{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","airplane":{"id":2,"name":"AirbusA320"},"airline":"AirlineY","price":250,"cxl_sit_id":456,"remaining_seats":30}]`},
+		{`?departure_city=CityA&arrival_city=CityB&date=2023-06-28&departure_time_from=09:00&departure_time_to=15:00`, http.StatusOK, `[{"id":1,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T10:00:00Z","arr_time":"2023-06-28T13:00:00Z","airplane":{"id":1,"name":"Boeing737"},"airline":"AirlineX","price":200,"cxl_sit_id":123,"remaining_seats":50},{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","airplane":{"id":2,"name":"AirbusA320"},"airline":"AirlineY","price":250,"cxl_sit_id":456,"remaining_seats":30}]`},
+		{`?departure_city=CityA&arrival_city=CityB&date=2023-06-28&departure_time_from=13:00&departure_time_to=15:00`, http.StatusOK, `[{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","airplane":{"id":2,"name":"AirbusA320"},"airline":"AirlineY","price":250,"cxl_sit_id":456,"remaining_seats":30}]`},
 	}
 
 	for _, t := range tests {

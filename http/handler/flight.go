@@ -49,7 +49,7 @@ func (req *GetFlightsRequest) Normalize() error {
 	}
 
 	if req.DeptimeFrom != "" {
-		date, err := utils.ParseDateTime(req.DeptimeFrom)
+		date, err := utils.ParseTime(req.FlightDate, req.DeptimeFrom)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func (req *GetFlightsRequest) Normalize() error {
 	}
 
 	if req.DeptimeTo != "" {
-		date, err := utils.ParseDateTime(req.DeptimeTo)
+		date, err := utils.ParseTime(req.FlightDate, req.DeptimeTo)
 		if err != nil {
 			return err
 		}
@@ -202,10 +202,10 @@ func filterByAirplaneName(flights []services.FlightResponse, airplaneName string
 	return filteredFlights
 }
 
-func filterByDeptime(flights []services.FlightResponse, depTimeFrom, dapTimeTo time.Time) []services.FlightResponse {
+func filterByDeptime(flights []services.FlightResponse, depTimeFrom, depTimeTo time.Time) []services.FlightResponse {
 	var filteredFlights []services.FlightResponse
 	for _, flight := range flights {
-		if flight.DepTime.After(depTimeFrom) && flight.DepTime.Before(dapTimeTo) {
+		if flight.DepTime.After(depTimeFrom) && flight.DepTime.Before(depTimeTo) {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}

@@ -14,6 +14,7 @@ var parseDateTimeRegex *regexp.Regexp
 func init() {
 	parseDateRegex = regexp.MustCompile(`^(\d+)-(\d+)-(\d+)$`)
 	parseDateTimeRegex = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$`)
+	parseDateTimeRegex = regexp.MustCompile(`^(\d{2}):(\d{2})$`)
 }
 
 func ParseDate(jalaliDate string) (time.Time, error) {
@@ -52,4 +53,19 @@ func ParseDateTime(datetime string) (time.Time, error) {
 	}
 
 	return parsedDatetime, nil
+}
+func ParseTime(FlightDate, timeString string) (time.Time, error) {
+	dd := parseDateTimeRegex.FindAllStringSubmatch(timeString, -1)
+	if len(dd) != 1 {
+		return time.Time{}, errors.New("parse time failed")
+	}
+
+	hour, _ := strconv.Atoi(dd[0][1])
+	minute, _ := strconv.Atoi(dd[0][2])
+
+	parsedTime, err := time.Parse("2006-01-02T15:04", fmt.Sprintf("%sT%02d:%02d", FlightDate, hour, minute))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return parsedTime, nil
 }
