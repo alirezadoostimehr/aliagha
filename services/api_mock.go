@@ -15,7 +15,6 @@ type APIMockClient struct {
 	Client  *http.Client
 	Breaker *breaker.Breaker
 	BaseURL string
-	APIKey  string
 	Timeout time.Duration
 }
 
@@ -25,7 +24,6 @@ type FlightResponse struct {
 	ArrCity        City      `json:"arr_city"`
 	DepTime        time.Time `json:"dep_time"`
 	ArrTime        time.Time `json:"arr_time"`
-	Date           time.Time `json:"date"`
 	Airplane       Airplane  `json:"airplane"`
 	Airline        string    `json:"airline"`
 	Price          int32     `json:"price"`
@@ -52,7 +50,6 @@ func (c *APIMockClient) GetFlights(depCity, arrCity, date string) ([]FlightRespo
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Api-Key", c.APIKey)
 
 	var resp []FlightResponse
 	err = c.Breaker.Run(func() error {

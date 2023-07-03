@@ -29,9 +29,9 @@ type GetFlightsRequest struct {
 	FDate          time.Time
 	Airline        string `query:"airline"`
 	AirplaneName   string `query:"airplane_name"`
-	DeptimeFrom    string `query:"departure_time_from" validate:"datetime"`
+	DeptimeFrom    string `query:"departure_time_from"`
 	DepTimeF       time.Time
-	DeptimeTo      string `query:"departure_time_to" validate:"datetime"`
+	DeptimeTo      string `query:"departure_time_to"`
 	DeptimeT       time.Time
 	SortBy         string `query:"sort_by"`
 	SortOrder      string `query:"sort_order"`
@@ -49,7 +49,7 @@ func (req *GetFlightsRequest) Normalize() error {
 	}
 
 	if req.DeptimeFrom != "" {
-		date, err := utils.ParseDate(req.DeptimeFrom)
+		date, err := utils.ParseDateTime(req.DeptimeFrom)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func (req *GetFlightsRequest) Normalize() error {
 	}
 
 	if req.DeptimeTo != "" {
-		date, err := utils.ParseDate(req.DeptimeTo)
+		date, err := utils.ParseDateTime(req.DeptimeTo)
 		if err != nil {
 			return err
 		}
