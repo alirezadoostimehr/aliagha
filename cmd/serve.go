@@ -80,5 +80,9 @@ func startServer() {
 	flightReservation := handler.FlightReservation{}
 	e.POST("/flights/reserve", flightReservation.Reserve)
 
-	e.Start("localhost:3030")
+	err = e.Start("localhost:3030")
+	if err != nil {
+		panic(err)
+	}
+
 }
