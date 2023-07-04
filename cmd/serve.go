@@ -77,5 +77,8 @@ func startServer() {
 	e.POST("/user/login", user.Login)
 	e.POST("/user/register", user.Register)
 
+	flightReservation := handler.FlightReservation{}
+	e.POST("/flights/reserve", flightReservation.Reserve)
+
 	e.Start("localhost:3030")
 }
