@@ -2,12 +2,15 @@ package handler
 
 import (
 	"aliagha/config"
+	"aliagha/helpers"
 	"aliagha/models"
 	"database/sql"
-	"github.com/dgrijalva/jwt-go"
+	"time"
+
+	"net/http"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"net/http"
 
 	"gorm.io/gorm"
 
@@ -20,12 +23,6 @@ type User struct {
 	Validator *validator.Validate
 }
 
-type CustomClaims struct {
-	UserID    int32  `json:"user_id"`
-	Cellphone string `json:"cellphone"`
-	jwt.StandardClaims
-}
-
 type LoginRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
@@ -35,47 +32,108 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
-func (u *User) Login(c echo.Context) error {
+func (u *User) Login(ctx echo.Context) error {
 	var req LoginRequest
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, "Bad Request")
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, "Bad Request")
 	}
 
 	if err := u.Validator.Struct(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		return ctx.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	var user models.User
 	err := u.DB.Where("email = ?", req.Email).First(&user).Error
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusUnauthorized, "Invalid Credentials")
+			return ctx.JSON(http.StatusUnauthorized, "Invalid Credentials")
 		} else {
-			return c.JSON(http.StatusInternalServerError, "Internal Server Error")
+			return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
 		}
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, "Invalid Credentials")
+		return ctx.JSON(http.StatusUnauthorized, "Invalid Credentials")
 	}
 
-	claims := &CustomClaims{
-		UserID:    user.ID,
-		Cellphone: user.Cellphone,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: u.JWT.ExpiresIn.Unix(),
-			Issuer:    "Aliagha",
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(u.JWT.SecretKey)
+	token, err := helpers.GenerateJwtToken(user.ID, user.Cellphone, u.JWT)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, "Internal Server Error")
+		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
 	}
 
-	return c.JSON(http.StatusOK, LoginResponse{
-		Token: tokenString,
+	return ctx.JSON(http.StatusOK, LoginResponse{
+		Token: token,
+	})
+}
+
+type RegisterRequest struct {
+	Name      string `json:"name" validate:"required,min=3,max=100"`
+	Cellphone string `json:"cellphone" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
+	Password  string `json:"password" validate:"required,min=6,max=20"`
+}
+
+type RegisterResponse struct {
+	Message string `json:"message"`
+	Token   string `json:"token"`
+}
+
+func (u *User) Register(ctx echo.Context) error {
+	var req RegisterRequest
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, "Bad Request")
+	}
+
+	if err := u.Validator.Struct(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	var user models.User
+	err := u.DB.Model(&models.User{}).Where("email = ?", req.Email).First(&user).Error
+
+	if err == nil {
+		return ctx.JSON(http.StatusUnprocessableEntity, "Email already exists")
+	}
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return ctx.JSON(http.StatusInternalServerError, "Internal server error")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, "Internal server error")
+	}
+
+	var token string
+	err = u.DB.Transaction(func(tx *gorm.DB) error {
+		user = models.User{
+			Name:      req.Name,
+			Cellphone: req.Cellphone,
+			Email:     req.Email,
+			Password:  string(hashedPassword),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		if err := tx.Create(&user).Error; err != nil {
+			return err
+		}
+
+		token, err = helpers.GenerateJwtToken(user.ID, user.Cellphone, u.JWT)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, "Internal server error")
+	}
+
+	return ctx.JSON(http.StatusCreated, RegisterResponse{
+		Message: "User created successfully",
+		Token:   token,
 	})
 }
