@@ -150,3 +150,50 @@ func (c *APIMockClient) Cancel(flightId, cnt int) error {
 
 	return err
 }
+
+// TODO: get this from api mock code
+type FlightInfoResponse struct {
+}
+
+func (c *APIMockClient) GetFlightInfo(flightId int) (FlightInfoResponse, error) {
+	url := c.BaseURL + fmt.Sprintf("/flight?flight_id=%d", flightId)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return FlightInfoResponse{}, err
+	}
+
+	var flight FlightInfoResponse
+	err = c.Breaker.Run(func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		response, err := c.Client.Do(req)
+		if err != nil {
+			return fmt.Errorf("apimock_get_flight_info: request failed, error: %v", err.Error())
+		}
+
+		responseBody, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return fmt.Errorf("apimock_get_flight_info: reading response failed, error: %v", err.Error())
+		}
+
+		if response.StatusCode != http.StatusOK {
+			return fmt.Errorf("apimock_get_flight_info: request failed, error: %v", err.Error())
+		}
+
+		if err := json.Unmarshal(responseBody, &flight); err != nil {
+			return fmt.Errorf("apimock_get_flight_info: parsing response body failed, error: %v", err.Error())
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return FlightInfoResponse{}, err
+	}
+
+	return flight, nil
+}
