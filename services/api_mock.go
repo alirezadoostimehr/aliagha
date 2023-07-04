@@ -92,3 +92,32 @@ func (c *APIMockClient) GetFlights(depCity, arrCity, date string) ([]FlightRespo
 
 	return resp, nil
 }
+
+func (c *APIMockClient) Reserve(flightId, cnt int) error {
+	url := c.BaseURL + fmt.Sprintf("/flights/reserve?flight_id=%d&count=%d", flightId, cnt)
+
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return err
+	}
+
+	err = c.Breaker.Run(func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		response, err := c.Client.Do(req)
+		if err != nil {
+			return fmt.Errorf("apimock_post_reserve: request failed, error: %v", err.Error())
+		}
+
+		if response.StatusCode != http.StatusOK {
+			return fmt.Errorf("apimock_post_reserve: request failed, error: %v", err.Error())
+		}
+
+		return nil
+	})
+
+	return err
+}
