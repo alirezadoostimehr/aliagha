@@ -77,7 +77,7 @@ func startServer() {
 	e.POST("/user/login", user.Login)
 	e.POST("/user/register", user.Register)
 
-	flightReservation := handler.FlightReservation{}
+	flightReservation := handler.FlightReservation{DB: db, Validator: vldt, APIMock: mockClient}
 	e.POST("/flights/reserve", flightReservation.Reserve)
 
 	err = e.Start("localhost:3030")
