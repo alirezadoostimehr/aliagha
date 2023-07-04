@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     p_id int NOT NULL ,
     f_id int NOT NULL ,
     status text NOT NULL ,
+    price int NOT NULL ,
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW() ,
 
