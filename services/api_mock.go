@@ -93,7 +93,7 @@ func (c *APIMockClient) GetFlights(depCity, arrCity, date string) ([]FlightRespo
 	return resp, nil
 }
 
-func (c *APIMockClient) Reserve(flightId, cnt int) error {
+func (c *APIMockClient) Reserve(flightId, cnt int32) error {
 	url := c.BaseURL + fmt.Sprintf("/flights/reserve?flight_id=%d&count=%d", flightId, cnt)
 
 	req, err := http.NewRequest(http.MethodPost, url, nil)
@@ -122,7 +122,7 @@ func (c *APIMockClient) Reserve(flightId, cnt int) error {
 	return err
 }
 
-func (c *APIMockClient) Cancel(flightId, cnt int) error {
+func (c *APIMockClient) Cancel(flightId, cnt int32) error {
 	url := c.BaseURL + fmt.Sprintf("/flights/cancel?flight_id=%d&count=%d", flightId, cnt)
 
 	req, err := http.NewRequest(http.MethodPost, url, nil)
@@ -153,9 +153,10 @@ func (c *APIMockClient) Cancel(flightId, cnt int) error {
 
 // TODO: get this from api mock code
 type FlightInfoResponse struct {
+	Price int32
 }
 
-func (c *APIMockClient) GetFlightInfo(flightId int) (FlightInfoResponse, error) {
+func (c *APIMockClient) GetFlightInfo(flightId int32) (FlightInfoResponse, error) {
 	url := c.BaseURL + fmt.Sprintf("/flight?flight_id=%d", flightId)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

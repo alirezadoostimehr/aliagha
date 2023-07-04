@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 	"net/http"
+	"strconv"
 )
 
 type FlightReservation struct {
@@ -16,9 +17,9 @@ type FlightReservation struct {
 }
 
 type FlightReservationRequest struct {
-	UserId       int   `json:"user_id"` // Should be taken from context
-	FlightId     int   `json:"flight_id" validate:"required"`
-	PassengerIds []int `json:"passenger_ids" validate:"required"`
+	UserId       int32   `json:"user_id"` // Should be taken from context
+	FlightId     int32   `json:"flight_id" validate:"required"`
+	PassengerIds []int32 `json:"passenger_ids" validate:"required"`
 }
 
 func (f *FlightReservation) Reserve(ctx echo.Context) error {
@@ -48,6 +49,54 @@ func (f *FlightReservation) Reserve(ctx echo.Context) error {
 		if exists == false {
 			return ctx.JSON(http.StatusBadRequest, "Passengers Not Allowed")
 		}
+	}
+
+	if err := f.APIMock.Reserve(req.FlightId, (int32)(len(req.PassengerIds))); err != nil {
+		return ctx.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	flightInfo, err := f.APIMock.GetFlightInfo(req.FlightId)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
+	}
+
+	passengerIdsStr := ""
+	for i, passengerId := range req.PassengerIds {
+		if i > 0 {
+			passengerIdsStr += ", "
+		}
+		passengerIdsStr += strconv.Itoa((int)(passengerId))
+	}
+
+	err = f.DB.Debug().Transaction(func(tx *gorm.DB) error {
+		ticket := models.Ticket{
+			UID:    req.UserId,
+			PIDs:   passengerIdsStr,
+			FID:    req.FlightId,
+			Status: "payment pending",
+			Price:  flightInfo.Price,
+		}
+
+		if err := tx.Debug().Model(&models.Ticket{}).Create(&ticket).Error; err != nil {
+			return err
+		}
+
+		payment := models.Payment{
+			UID:    req.UserId,
+			Type:   "ticket",
+			Ticket: ticket,
+			Status: "pending",
+		}
+
+		if err := tx.Debug().Model(&models.Payment{}).Create(&payment).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
 	}
 
 	return ctx.JSON(http.StatusOK, req)
