@@ -49,7 +49,6 @@ func (suite *PassengerTestSuite) SetupSuite() {
 	suite.passenger = &Passenger{
 		DB:        db,
 		Validator: vldt,
-		UID:       0,
 	}
 
 	bd1, _ := time.Parse("2001-02-03", "2001-02-03")
@@ -61,16 +60,17 @@ func (suite *PassengerTestSuite) SetupSuite() {
 
 }
 
-func (suite *PassengerTestSuite) CallHandler(requestBody string, endPoint string) (*httptest.ResponseRecorder, error) {
-	req := httptest.NewRequest(http.MethodPost, endPoint, strings.NewReader(requestBody))
+func (suite *PassengerTestSuite) CallHandler(requestBody string, method string) (*httptest.ResponseRecorder, error) {
+	req := httptest.NewRequest(http.MethodPost, "/passengers", strings.NewReader(requestBody))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	res := httptest.NewRecorder()
 	c := suite.e.NewContext(req, res)
+	c.Set("user_id", int32(0))
 	var err error
 
-	if endPoint == "/passenger/create" {
+	if method == "Post" {
 		err = suite.passenger.CreatePassenger(c)
-	} else if endPoint == "/passenger/list" {
+	} else {
 		err = suite.passenger.GetPassengers(c)
 	}
 
@@ -84,7 +84,7 @@ func (suite *PassengerTestSuite) CallHandler(requestBody string, endPoint string
 func (suite *PassengerTestSuite) TestGetPassenger_BindErr_Failure() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusBadRequest
-	res, err := suite.CallHandler(`{"Jane Doe","national_code":"250002023","Birthdate":"2003-02-01"}`, "/passenger/create")
+	res, err := suite.CallHandler(`{"Jane Doe","national_code":"250002023","Birthdate":"2003-02-01"}`, "Post")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 }
@@ -94,17 +94,17 @@ func (suite *PassengerTestSuite) TestGetPassenger_ValidationErr_Failure() {
 
 	tests := []struct {
 		requestBody string
-		endPoint    string
+		method      string
 		statusCode  int
 	}{
-		{`{"name":"Ja","national_code":"250002023","Birthdate":"2003-02-01"}`, "/passenger/create", http.StatusBadRequest},
-		{`{,"national_code":"250002023","Birthdate":"2003-02-01"}`, "/passenger/create", http.StatusBadRequest},
-		{`{"name":"Jane Doe","Birthdate":"2003-02-01"}`, "/passenger/create", http.StatusBadRequest},
-		{`{"name":"Jane Doe","national_code":"250002023","Birthdate":"2003-02"}`, "/passenger/create", http.StatusBadRequest},
+		{`{"name":"Ja","national_code":"250002023","Birthdate":"2003-02-01"}`, "Post", http.StatusBadRequest},
+		{`{,"national_code":"250002023","Birthdate":"2003-02-01"}`, "Post", http.StatusBadRequest},
+		{`{"name":"Jane Doe","Birthdate":"2003-02-01"}`, "Post", http.StatusBadRequest},
+		{`{"name":"Jane Doe","national_code":"250002023","Birthdate":"2003-02"}`, "Post", http.StatusBadRequest},
 	}
 
 	for _, t := range tests {
-		res, err := suite.CallHandler(t.requestBody, t.endPoint)
+		res, err := suite.CallHandler(t.requestBody, t.method)
 		require.NoError(err)
 		require.Equal(t.statusCode, res.Code)
 	}
@@ -120,8 +120,8 @@ func (suite *PassengerTestSuite) TestCreatePassenger_Success() {
 	})
 	defer monkey.Unpatch(suite.passenger.Validator.Struct)
 
-	suite.sqlMock.ExpectQuery("^SELECT (.+) FROM `passengers` WHERE national_code = (.+) ORDER BY `passengers`.`id` LIMIT 1").
-		WithArgs("250002023").
+	suite.sqlMock.ExpectQuery("^SELECT (.+) FROM `passengers` WHERE u_id = (.+) AND national_code = (.+)  ORDER BY `passengers`.`id` LIMIT 1").
+		WithArgs("250002023", 0).
 		WillReturnError(gorm.ErrRecordNotFound)
 
 	suite.sqlMock.ExpectBegin()
@@ -130,7 +130,7 @@ func (suite *PassengerTestSuite) TestCreatePassenger_Success() {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	suite.sqlMock.ExpectCommit()
 
-	res, err := suite.CallHandler(`{"name":"Jane Doe","national_code":"250002023","Birthdate":"2003-02-01"}`, "/passenger/create")
+	res, err := suite.CallHandler(`{"name":"Jane Doe","national_code":"250002023","Birthdate":"2003-02-01"}`, "Post")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 	require.JSONEq(expectedResponse, res.Body.String())
@@ -140,12 +140,12 @@ func (suite *PassengerTestSuite) TestGetPassengers_Success() {
 	expectedStatusCode := http.StatusOK
 
 	suite.sqlMock.ExpectQuery("^SELECT \\* FROM `passengers` WHERE u_id \\= \\?$").
-		WithArgs(suite.passenger.UID).
+		WithArgs(0).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "national_code", "birthdate"}).
 			AddRow(suite.passengers[0].ID, suite.passengers[0].Name, suite.passengers[0].NationalCode, suite.passengers[0].Birthdate).
 			AddRow(suite.passengers[1].ID, suite.passengers[1].Name, suite.passengers[1].NationalCode, suite.passengers[1].Birthdate))
 
-	res, err := suite.CallHandler("", "/passenger/list")
+	res, err := suite.CallHandler("", "Get")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 	var response struct {
@@ -168,16 +168,34 @@ func (suite *PassengerTestSuite) TestPassenger_Database_Failure() {
 	expectedStatusCode := http.StatusInternalServerError
 	expectedResponse := "\"Failed to retrieve passengers\""
 
-	// Set up the expectation for the database mock to return an error
-	suite.sqlMock.ExpectQuery("^SELECT (.+) FROM `passengers` WHERE = (.+)").
-		WithArgs(suite.passenger.UID).
+	suite.sqlMock.ExpectQuery("^SELECT (.+) FROM `passengers` WHERE u_id = (.+)").
+		WithArgs(0).
 		WillReturnError(errors.New("database error"))
 
-	res, err := suite.CallHandler("", "/passenger/list")
+	res, err := suite.CallHandler("", "Get")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
-	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String())) // Trim extra whitespace
+	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String()))
+}
+func (suite *PassengerTestSuite) TestCreatePassenger_Failure_PassengerAlreadyExists() {
+	require := suite.Require()
+	expectedStatusCode := http.StatusUnprocessableEntity
+	expectedResponse := "\"passenger already exists\""
 
+	monkey.Patch(suite.passenger.Validator.Struct, func(s interface{}) error {
+		return nil
+	})
+	defer monkey.Unpatch(suite.passenger.Validator.Struct)
+
+	suite.sqlMock.ExpectQuery("^SELECT \\* FROM `passengers` WHERE u_id \\=\\? AND national_code \\=\\? `passengers`.`id` LIMIT 1 $").
+		WithArgs("250002023", int32(0)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "national_code", "birthdate"}).
+			AddRow(suite.passengers[1].ID, suite.passengers[1].Name, suite.passengers[1].NationalCode, suite.passengers[1].Birthdate))
+
+	res, err := suite.CallHandler(`{"name":"Jane Doe","national_code":"250002023","Birthdate":"2003-02-01"}`, "Post")
+	require.NoError(err)
+	require.Equal(expectedStatusCode, res.Code)
+	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String()))
 }
 
 func TestPassenger(t *testing.T) {

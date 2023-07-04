@@ -13,7 +13,6 @@ import (
 type Passenger struct {
 	DB        *gorm.DB
 	Validator *validator.Validate
-	UID       int32
 }
 
 type CreatePassengerRequest struct {
@@ -27,7 +26,7 @@ type CreatePassengerResponse struct {
 }
 
 func (p *Passenger) CreatePassenger(ctx echo.Context) error {
-	p.UID = ctx.Get("user_id").(int32)
+	UID := ctx.Get("user_id").(int32)
 	var req CreatePassengerRequest
 	if err := ctx.Bind(&req); err != nil {
 		return ctx.JSON(http.StatusBadRequest, "Bad Request")
@@ -38,7 +37,7 @@ func (p *Passenger) CreatePassenger(ctx echo.Context) error {
 	}
 
 	var passenger models.Passenger
-	err := p.DB.Model(&models.Passenger{}).Where("national_code = ?", req.NationalCode).First(&passenger).Error
+	err := p.DB.Model(&models.Passenger{}).Where("u_id = ? AND national_code = ?", UID, req.NationalCode).First(&passenger).Error
 
 	if err == nil {
 		return ctx.JSON(http.StatusUnprocessableEntity, "passenger already exists")
@@ -49,6 +48,7 @@ func (p *Passenger) CreatePassenger(ctx echo.Context) error {
 	}
 
 	passenger = models.Passenger{
+		UID:          UID,
 		Name:         req.Name,
 		NationalCode: req.NationalCode,
 		Birthdate:    req.Birthdate,
@@ -70,8 +70,9 @@ type GetPassengersResponse struct {
 }
 
 func (p *Passenger) GetPassengers(ctx echo.Context) error {
+	UID := ctx.Get("user_id").(int32)
 	var passengers []models.Passenger
-	result := p.DB.Model(&models.Passenger{}).Where("u_id = ?", p.UID).Find(&passengers)
+	result := p.DB.Model(&models.Passenger{}).Where("u_id = ?", UID).Find(&passengers)
 
 	if result.Error != nil {
 		return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve passengers")
@@ -79,55 +80,5 @@ func (p *Passenger) GetPassengers(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, GetPassengersResponse{
 		Passengers: passengers,
-	})
-}
-
-type UpdatePassengerRequest struct {
-	Name         string    `json:"name,omitempty" validate:"omitempty,min=3,max=100"`
-	NationalCode string    `json:"national_code,omitempty" validate:"numerical,length=10"`
-	Birthdate    time.Time `json:"birthdate,omitempty"`
-}
-
-type UpdatePassengerResponse struct {
-	Message string `json:"message"`
-}
-
-func (p *Passenger) UpdatePassenger(ctx echo.Context) error {
-	passengerID := ctx.Param("id")
-
-	var passenger models.Passenger
-	result := p.DB.Where("u_id = ? AND id = ?", p.UID, passengerID).First(&passenger)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return ctx.JSON(http.StatusNotFound, "Passenger not found")
-		} else {
-			return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
-		}
-	}
-
-	// Update passenger fields if provided
-	var req UpdatePassengerRequest
-	if err := ctx.Bind(&req); err != nil {
-		return ctx.JSON(http.StatusBadRequest, "Bad Request")
-	}
-
-	if req.Name != "" {
-		passenger.Name = req.Name
-	}
-	if req.NationalCode != "" {
-		passenger.NationalCode = req.NationalCode
-	}
-	if !req.Birthdate.IsZero() {
-		passenger.Birthdate = req.Birthdate
-	}
-	passenger.UpdatedAt = time.Now()
-
-	result = p.DB.Save(&passenger)
-	if result.Error != nil {
-		return ctx.JSON(http.StatusInternalServerError, "Failed to update passenger")
-	}
-
-	return ctx.JSON(http.StatusOK, UpdatePassengerResponse{
-		Message: "Passenger updated successfully",
 	})
 }

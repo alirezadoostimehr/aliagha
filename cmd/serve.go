@@ -74,8 +74,8 @@ func startServer() {
 	e.POST("/user/login", user.Login)
 
 	passenger := handler.Passenger{DB: db, Validator: vldt}
-	e.POST("/passenger/create", passenger.CreatePassenger, middleware.AuthMiddleware(cfg.JWT.SecretKey))
-	e.GET("/passenger/list", passenger.GetPassengers)
+	e.POST("/passengers", passenger.CreatePassenger, middleware.AuthMiddleware(cfg.JWT.SecretKey))
+	e.GET("/passengers", passenger.GetPassengers)
 
 	e.Start("localhost:3030")
 }
