@@ -34,4 +34,4 @@ security:
 # Jwt-based authentication configuration
 jwt:
   secret_key: mysecretkey
-  expires_in: 24 * time.Hour
+  expires_in: 24 * time.Duration

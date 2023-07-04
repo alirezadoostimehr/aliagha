@@ -69,10 +69,13 @@ func startServer() {
 	}
 
 	flight := handler.Flight{Redis: redis, Validator: vldt, Config: cfg, APIMock: mockClient}
+	// jwtMiddleware := middleware.AuthenticatorMiddleware(cfg.JWT.SecretKey)
+
 	e.GET("/flights", flight.Get)
 
 	user := handler.User{DB: db, JWT: &cfg.JWT, Validator: vldt}
 	e.POST("/user/login", user.Login)
+	e.POST("/user/register", user.Register)
 
 	e.Start("localhost:3030")
 }
