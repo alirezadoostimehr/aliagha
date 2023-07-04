@@ -21,6 +21,7 @@ type Redis struct {
 	Host     string
 	Port     int
 	Password string
+	TTL      time.Duration
 }
 
 type Database struct {
@@ -45,9 +46,9 @@ type PaymentGateway struct {
 }
 
 type MockAPI struct {
-	URL        string
-	AuthKey    string
-	AuthSecret string
+	URL     string
+	ApiKey  string
+	Timeout time.Duration
 }
 
 type Security struct {
@@ -74,10 +75,12 @@ func Init(param Params) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %s", err)
 	}
+
 	redis := &Redis{
 		Host:     viper.GetString("redis.host"),
 		Port:     viper.GetInt("redis.port"),
 		Password: viper.GetString("redis.password"),
+		TTL:      viper.GetDuration("redis.TTL"),
 	}
 	database := &Database{
 		Driver:   viper.GetString("database.driver"),
@@ -100,9 +103,9 @@ func Init(param Params) (*Config, error) {
 	}
 
 	mockAPI := &MockAPI{
-		URL:        viper.GetString("mock_api.url"),
-		AuthKey:    viper.GetString("mock_api.auth_key"),
-		AuthSecret: viper.GetString("mock_api.auth_secret"),
+		URL:     viper.GetString("mock_api.url"),
+		ApiKey:  viper.GetString("mock_api.api_key"),
+		Timeout: viper.GetDuration("mock_api.timeout"),
 	}
 
 	security := &Security{
