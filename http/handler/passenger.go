@@ -71,7 +71,7 @@ type GetPassengersResponse struct {
 
 func (p *Passenger) GetPassengers(ctx echo.Context) error {
 	var passengers []models.Passenger
-	result := p.DB.Joins("User").Where("id = ?", p.UID).Find(&passengers)
+	result := p.DB.Model(&models.Passenger{}).Where("U_id = ?", p.UID).Find(&passengers)
 
 	if result.Error != nil {
 		return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve passengers")

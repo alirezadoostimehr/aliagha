@@ -139,7 +139,7 @@ func (suite *PassengerTestSuite) TestGetPassengers_Success() {
 	expectedStatusCode := http.StatusOK
 	expectedResponse := `{"passengers": [{"UID": 1,"ID": 1,"Name": "John Doe","NationalCode": "1234567890","Birthdate": "2003-02-01"},{"UID": 1,"ID": 2,"Name": "Jane Smith","NationalCode": "0987654321","Birthdate": "2001-02-03"}]}`
 
-	suite.sqlMock.ExpectQuery("^SELECT passengers`\\.`id,passengers`\\.`u_id,passengers`\\.`national_code,passengers`\\.`name,passengers`\\.`birthdate,passengers`\\.`created_at,passengers`\\.`updated_at,`User`\\.`id AS u_id`FROM `passengers LEFT JOIN users User ON passenger`\\.`u_id WHERE User\\.id \\= \\?").
+	suite.sqlMock.ExpectQuery("^SELECT passengers`\\.`id,passengers`\\.`u_id,passengers`\\.`national_code,passengers`\\.`name,passengers`\\.`birthdate,passengers`\\.`created_at,passengers`\\.`updated_at` WHERE passenger\\.u_id \\= \\?$").
 		WithArgs(suite.passenger.UID).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "national_code", "birthdate"}).
 			AddRow(suite.passengers[0].ID, suite.passengers[0].Name, suite.passengers[0].NationalCode, suite.passengers[0].Birthdate).
