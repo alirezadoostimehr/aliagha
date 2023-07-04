@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS payments (
     u_id int NOT NULL ,
     type text NOT NULL ,
     ticket_id int NOT NULL ,
+    status varchar(255) NOT NULL ,
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW() ,
 
