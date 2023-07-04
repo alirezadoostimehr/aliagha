@@ -55,8 +55,8 @@ func (suite *PassengerTestSuite) SetupSuite() {
 	bd1, _ := time.Parse("2001-02-03", "2001-02-03")
 	bd2, _ := time.Parse("2001-02-03", "2003-02-01")
 	suite.passengers = []models.Passenger{
-		{UID: 0, ID: 1, Name: "John Smith", NationalCode: 1234567890, Birthdate: bd1},
-		{UID: 0, ID: 2, Name: "Jane Doe", NationalCode: 250002023, Birthdate: bd2},
+		{UID: 0, ID: 1, Name: "John Smith", NationalCode: "1234567890", Birthdate: bd1},
+		{UID: 0, ID: 2, Name: "Jane Doe", NationalCode: "250002023", Birthdate: bd2},
 	}
 
 }

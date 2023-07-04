@@ -18,7 +18,7 @@ type Passenger struct {
 
 type CreatePassengerRequest struct {
 	Name         string    `json:"name" validate:"required,min=3,max=100"`
-	NationalCode int32     `json:"national_code" validate:"required"`
+	NationalCode string    `json:"national_code" validate:"required,numerical,length=10"`
 	Birthdate    time.Time `json:"birthdate" validate:"required,date"`
 }
 
@@ -84,7 +84,7 @@ func (p *Passenger) GetPassengers(ctx echo.Context) error {
 
 type UpdatePassengerRequest struct {
 	Name         string    `json:"name,omitempty" validate:"omitempty,min=3,max=100"`
-	NationalCode int32     `json:"national_code,omitempty"`
+	NationalCode string    `json:"national_code,omitempty" validate:"numerical,length=10"`
 	Birthdate    time.Time `json:"birthdate,omitempty"`
 }
 
@@ -114,7 +114,7 @@ func (p *Passenger) UpdatePassenger(ctx echo.Context) error {
 	if req.Name != "" {
 		passenger.Name = req.Name
 	}
-	if req.NationalCode != 0 {
+	if req.NationalCode != "" {
 		passenger.NationalCode = req.NationalCode
 	}
 	if !req.Birthdate.IsZero() {
