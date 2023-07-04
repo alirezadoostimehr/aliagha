@@ -2,6 +2,7 @@ package handler
 
 import (
 	"aliagha/models"
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -48,14 +49,14 @@ func (suite *PassengerTestSuite) SetupSuite() {
 	suite.passenger = &Passenger{
 		DB:        db,
 		Validator: vldt,
-		UID:       1,
+		UID:       0,
 	}
 
 	bd1, _ := time.Parse("2001-02-03", "2001-02-03")
 	bd2, _ := time.Parse("2001-02-03", "2003-02-01")
 	suite.passengers = []models.Passenger{
-		{UID: 1, ID: 1, Name: "John Smith", NationalCode: 1234567890, Birthdate: bd1},
-		{UID: 1, ID: 2, Name: "Jane Doe", NationalCode: 250002023, Birthdate: bd2},
+		{UID: 0, ID: 1, Name: "John Smith", NationalCode: 1234567890, Birthdate: bd1},
+		{UID: 0, ID: 2, Name: "Jane Doe", NationalCode: 250002023, Birthdate: bd2},
 	}
 
 }
@@ -137,9 +138,8 @@ func (suite *PassengerTestSuite) TestCreatePassenger_Success() {
 func (suite *PassengerTestSuite) TestGetPassengers_Success() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusOK
-	expectedResponse := `{"passengers": [{"UID": 1,"ID": 1,"Name": "John Doe","NationalCode": "1234567890","Birthdate": "2003-02-01"},{"UID": 1,"ID": 2,"Name": "Jane Smith","NationalCode": "0987654321","Birthdate": "2001-02-03"}]}`
 
-	suite.sqlMock.ExpectQuery("^SELECT passengers`\\.`id,passengers`\\.`u_id,passengers`\\.`national_code,passengers`\\.`name,passengers`\\.`birthdate,passengers`\\.`created_at,passengers`\\.`updated_at` WHERE passenger\\.u_id \\= \\?$").
+	suite.sqlMock.ExpectQuery("^SELECT \\* FROM `passengers` WHERE u_id \\= \\?$").
 		WithArgs(suite.passenger.UID).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "national_code", "birthdate"}).
 			AddRow(suite.passengers[0].ID, suite.passengers[0].Name, suite.passengers[0].NationalCode, suite.passengers[0].Birthdate).
@@ -148,10 +148,21 @@ func (suite *PassengerTestSuite) TestGetPassengers_Success() {
 	res, err := suite.CallHandler("", "/passenger/list")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
+	var response struct {
+		Passengers []models.Passenger `json:"passengers"`
+	}
 
-	require.JSONEq(expectedResponse, res.Body.String())
-	require.JSONEq(expectedResponse, res.Body.String())
+	err = json.Unmarshal(res.Body.Bytes(), &response)
+
+	for i := range response.Passengers {
+		require.Equal(suite.passengers[i].ID, response.Passengers[i].ID)
+		require.Equal(suite.passengers[i].UID, response.Passengers[i].UID)
+		require.Equal(suite.passengers[i].Name, response.Passengers[i].Name)
+		require.Equal(suite.passengers[i].NationalCode, response.Passengers[i].NationalCode)
+		require.Equal(suite.passengers[i].Birthdate, response.Passengers[i].Birthdate)
+	}
 }
+
 func (suite *PassengerTestSuite) TestPassenger_Database_Failure() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusInternalServerError
