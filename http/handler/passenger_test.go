@@ -55,7 +55,7 @@ func (suite *PassengerTestSuite) SetupSuite() {
 	bd2, _ := time.Parse("2001-02-03", "2003-02-01")
 	suite.passengers = []models.Passenger{
 		{UID: 0, ID: 1, Name: "John Smith", NationalCode: "1234567890", Birthdate: bd1},
-		{UID: 0, ID: 2, Name: "Jane Doe", NationalCode: "250002023", Birthdate: bd2},
+		{UID: 0, ID: 2, Name: "Jane Doe", NationalCode: "0123456789", Birthdate: bd2},
 	}
 
 }
@@ -65,7 +65,7 @@ func (suite *PassengerTestSuite) CallHandler(requestBody string, method string) 
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	res := httptest.NewRecorder()
 	c := suite.e.NewContext(req, res)
-	c.Set("user_id", int32(0))
+	c.Set("user_id", "0")
 	var err error
 
 	if method == "Post" {
@@ -84,7 +84,7 @@ func (suite *PassengerTestSuite) CallHandler(requestBody string, method string) 
 func (suite *PassengerTestSuite) TestGetPassenger_BindErr_Failure() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusBadRequest
-	res, err := suite.CallHandler(`{"Jane Doe","national_code":"250002023","Birthdate":"2003-02-01"}`, "Post")
+	res, err := suite.CallHandler(`{"Jane Doe","national_code":"0123456789","birth_date":"2003-02-01"}`, "Post")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 }
@@ -97,10 +97,10 @@ func (suite *PassengerTestSuite) TestGetPassenger_ValidationErr_Failure() {
 		method      string
 		statusCode  int
 	}{
-		{`{"name":"Ja","national_code":"250002023","Birthdate":"2003-02-01"}`, "Post", http.StatusBadRequest},
-		{`{,"national_code":"250002023","Birthdate":"2003-02-01"}`, "Post", http.StatusBadRequest},
-		{`{"name":"Jane Doe","Birthdate":"2003-02-01"}`, "Post", http.StatusBadRequest},
-		{`{"name":"Jane Doe","national_code":"250002023","Birthdate":"2003-02"}`, "Post", http.StatusBadRequest},
+		{`{"name":"Ja","national_code":"0123456789","birth_date":"2003-02-01"}`, "Post", http.StatusUnprocessableEntity},
+		{`{"name":"","national_code":"0123456789","birth_date":"2003-02-01"}`, "Post", http.StatusUnprocessableEntity},
+		{`{"name":"Jane Doe","birth_date":"2003-02-01"}`, "Post", http.StatusUnprocessableEntity},
+		{`{"name":"Jane Doe","national_code":"0123456789","birth_date":"2003-02"}`, "Post", http.StatusUnprocessableEntity},
 	}
 
 	for _, t := range tests {
@@ -121,16 +121,16 @@ func (suite *PassengerTestSuite) TestCreatePassenger_Success() {
 	defer monkey.Unpatch(suite.passenger.Validator.Struct)
 
 	suite.sqlMock.ExpectQuery("^SELECT (.+) FROM `passengers` WHERE u_id = (.+) AND national_code = (.+)  ORDER BY `passengers`.`id` LIMIT 1").
-		WithArgs("250002023", 0).
+		WithArgs(0, "0123456789").
 		WillReturnError(gorm.ErrRecordNotFound)
 
 	suite.sqlMock.ExpectBegin()
 	suite.sqlMock.ExpectExec("INSERT INTO `passengers`").
-		WithArgs("Jane Doe", "250002023", "2003-02-01", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(0, "0123456789", "Jane Doe", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	suite.sqlMock.ExpectCommit()
 
-	res, err := suite.CallHandler(`{"name":"Jane Doe","national_code":"250002023","Birthdate":"2003-02-01"}`, "Post")
+	res, err := suite.CallHandler(`{"name":"Jane Doe","national_code":"0123456789","birth_date":"2003-02-01"}`, "Post")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 	require.JSONEq(expectedResponse, res.Body.String())
@@ -180,19 +180,19 @@ func (suite *PassengerTestSuite) TestPassenger_Database_Failure() {
 func (suite *PassengerTestSuite) TestCreatePassenger_Failure_PassengerAlreadyExists() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusUnprocessableEntity
-	expectedResponse := "\"passenger already exists\""
+	expectedResponse := "\"Passenger already exists\""
 
 	monkey.Patch(suite.passenger.Validator.Struct, func(s interface{}) error {
 		return nil
 	})
 	defer monkey.Unpatch(suite.passenger.Validator.Struct)
 
-	suite.sqlMock.ExpectQuery("^SELECT \\* FROM `passengers` WHERE u_id \\=\\? AND national_code \\=\\? `passengers`.`id` LIMIT 1 $").
-		WithArgs("250002023", int32(0)).
+	suite.sqlMock.ExpectQuery("^SELECT \\* FROM `passengers` WHERE u_id = \\? AND national_code = \\? ORDER BY `passengers`.`id` LIMIT 1$").
+		WithArgs(0, "0123456789").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "national_code", "birthdate"}).
 			AddRow(suite.passengers[1].ID, suite.passengers[1].Name, suite.passengers[1].NationalCode, suite.passengers[1].Birthdate))
 
-	res, err := suite.CallHandler(`{"name":"Jane Doe","national_code":"250002023","Birthdate":"2003-02-01"}`, "Post")
+	res, err := suite.CallHandler(`{"name":"Jane Doe","national_code":"0123456789","birth_date":"2003-02-01"}`, "Post")
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String()))

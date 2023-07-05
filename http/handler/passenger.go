@@ -19,7 +19,7 @@ type Passenger struct {
 
 type CreatePassengerRequest struct {
 	Name         string `json:"name" validate:"required,min=3,max=100"`
-	NationalCode string `json:"national_code" validate:"required,numeric"`
+	NationalCode string `json:"national_code" validate:"required,len=10,numeric"`
 	Birthdate    string `json:"birth_date" validate:"required"`
 }
 
@@ -41,18 +41,21 @@ func (p *Passenger) CreatePassenger(ctx echo.Context) error {
 		return ctx.JSON(http.StatusUnprocessableEntity, err.Error())
 	}
 
+	birthDate, err := utils.ParseDate(req.Birthdate)
+	if err != nil {
+		return ctx.JSON(http.StatusUnprocessableEntity, "Wrong date format")
+	}
+
 	var passenger models.Passenger
 	err = p.DB.Model(&models.Passenger{}).Where("u_id = ? AND national_code = ?", UID, req.NationalCode).First(&passenger).Error
 
 	if err == nil {
-		return ctx.JSON(http.StatusUnprocessableEntity, "passenger already exists")
+		return ctx.JSON(http.StatusUnprocessableEntity, "Passenger already exists")
 	}
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return ctx.JSON(http.StatusInternalServerError, "Internal server error")
 	}
-
-	birthDate, _ := utils.ParseDate(req.Birthdate)
 
 	passenger = models.Passenger{
 		UID:          (int32)(UID),
@@ -97,16 +100,17 @@ func (p *Passenger) GetPassengers(ctx echo.Context) error {
 	}
 
 	resp := make([]PassengerResponse, 0, len(passengers))
+
 	for _, passenger := range passengers {
 		resp = append(resp, PassengerResponse{
 			ID:           passenger.ID,
 			UID:          passenger.UID,
 			NationalCode: passenger.NationalCode,
 			Name:         passenger.Name,
-			Birthdate:    passenger.Birthdate.(string),
+			Birthdate:    passenger.Birthdate.Format("2003-02-01"),
 		})
 	}
 	return ctx.JSON(http.StatusOK, GetPassengersResponse{
-		Passengers: passengers,
+		Passengers: resp,
 	})
 }
