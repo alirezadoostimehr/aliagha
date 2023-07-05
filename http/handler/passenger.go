@@ -2,7 +2,9 @@ package handler
 
 import (
 	"aliagha/models"
+	"aliagha/utils"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -16,9 +18,9 @@ type Passenger struct {
 }
 
 type CreatePassengerRequest struct {
-	Name         string    `json:"name" validate:"required,min=3,max=100"`
-	NationalCode string    `json:"national_code" validate:"required,numerical,length=10"`
-	Birthdate    time.Time `json:"birthdate" validate:"required,date"`
+	Name         string `json:"name" validate:"required,min=3,max=100"`
+	NationalCode string `json:"national_code" validate:"required,numeric"`
+	Birthdate    string `json:"birth_date" validate:"required"`
 }
 
 type CreatePassengerResponse struct {
@@ -26,7 +28,10 @@ type CreatePassengerResponse struct {
 }
 
 func (p *Passenger) CreatePassenger(ctx echo.Context) error {
-	UID := ctx.Get("user_id").(int32)
+	UID, err := strconv.Atoi(ctx.Get("user_id").(string))
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
 	var req CreatePassengerRequest
 	if err := ctx.Bind(&req); err != nil {
 		return ctx.JSON(http.StatusBadRequest, "Bad Request")
@@ -37,7 +42,7 @@ func (p *Passenger) CreatePassenger(ctx echo.Context) error {
 	}
 
 	var passenger models.Passenger
-	err := p.DB.Model(&models.Passenger{}).Where("u_id = ? AND national_code = ?", UID, req.NationalCode).First(&passenger).Error
+	err = p.DB.Model(&models.Passenger{}).Where("u_id = ? AND national_code = ?", UID, req.NationalCode).First(&passenger).Error
 
 	if err == nil {
 		return ctx.JSON(http.StatusUnprocessableEntity, "passenger already exists")
@@ -47,11 +52,13 @@ func (p *Passenger) CreatePassenger(ctx echo.Context) error {
 		return ctx.JSON(http.StatusInternalServerError, "Internal server error")
 	}
 
+	birthDate, _ := utils.ParseDate(req.Birthdate)
+
 	passenger = models.Passenger{
-		UID:          UID,
+		UID:          (int32)(UID),
 		Name:         req.Name,
 		NationalCode: req.NationalCode,
-		Birthdate:    req.Birthdate,
+		Birthdate:    birthDate,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
@@ -66,11 +73,22 @@ func (p *Passenger) CreatePassenger(ctx echo.Context) error {
 }
 
 type GetPassengersResponse struct {
-	Passengers []models.Passenger `json:"passengers"`
+	Passengers []PassengerResponse `json:"passengers"`
+}
+
+type PassengerResponse struct {
+	ID           int32  `json:"id"`
+	UID          int32  `json:"u_id"`
+	NationalCode string `json:"national_code"`
+	Name         string `json:"name"`
+	Birthdate    string `json:"birth_date"`
 }
 
 func (p *Passenger) GetPassengers(ctx echo.Context) error {
-	UID := ctx.Get("user_id").(int32)
+	UID, err := strconv.Atoi(ctx.Get("user_id").(string))
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
 	var passengers []models.Passenger
 	result := p.DB.Model(&models.Passenger{}).Where("u_id = ?", UID).Find(&passengers)
 
@@ -78,6 +96,16 @@ func (p *Passenger) GetPassengers(ctx echo.Context) error {
 		return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve passengers")
 	}
 
+	resp := make([]PassengerResponse, 0, len(passengers))
+	for _, passenger := range passengers {
+		resp = append(resp, PassengerResponse{
+			ID:           passenger.ID,
+			UID:          passenger.UID,
+			NationalCode: passenger.NationalCode,
+			Name:         passenger.Name,
+			Birthdate:    passenger.Birthdate.(string),
+		})
+	}
 	return ctx.JSON(http.StatusOK, GetPassengersResponse{
 		Passengers: passengers,
 	})

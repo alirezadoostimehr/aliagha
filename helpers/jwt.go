@@ -25,7 +25,7 @@ func GenerateJwtToken(userID int32, cellphone string, jwtConfig *config.JWT) (st
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtConfig.SecretKey)
+	tokenString, err := token.SignedString([]byte(jwtConfig.SecretKey))
 
 	return tokenString, err
 }
@@ -41,6 +41,6 @@ func ParseJWTToken(tokenString, secretKey string) (string, error) {
 		return "", fmt.Errorf("invalid token")
 	}
 	claims := token.Claims.(jwt.MapClaims)
-	userID := claims["user_id"].(string)
+	userID := fmt.Sprintf("%d", (int)(claims["user_id"].(float64)))
 	return userID, err
 }
