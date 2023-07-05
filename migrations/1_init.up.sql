@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users
     id int PRIMARY KEY AUTO_INCREMENT ,
     name varchar(255) NOT NULL ,
     password varchar(255) NOT NULL ,
-    mobile varchar(16) NOT NULL ,
+    cellphone varchar(16) NOT NULL ,
     email varchar(255) NOT NULL UNIQUE ,
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW()
