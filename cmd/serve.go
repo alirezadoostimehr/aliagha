@@ -4,6 +4,7 @@ import (
 	"aliagha/config"
 	"aliagha/database"
 	"aliagha/http/handler"
+	"aliagha/http/middleware"
 	"aliagha/services"
 	"net/http"
 
