@@ -4,6 +4,7 @@ import (
 	"aliagha/config"
 	"aliagha/database"
 	"aliagha/http/handler"
+	"aliagha/http/middleware"
 	"aliagha/services"
 	"net/http"
 
@@ -39,7 +40,6 @@ func init() {
 }
 
 func startServer() {
-	//todo: get config path as a flag
 	cfg, err := config.Init(config.Params{FilePath: serveConfigPath, FileType: "yaml"})
 	if err != nil {
 		panic(err)
@@ -59,7 +59,6 @@ func startServer() {
 
 	e := echo.New()
 
-	//TODO: remove apikey
 	mockClient := services.APIMockClient{
 		Client:  &http.Client{},
 		Breaker: &breaker.Breaker{},
@@ -76,6 +75,10 @@ func startServer() {
 	user := handler.User{DB: db, JWT: &cfg.JWT, Validator: vldt}
 	e.POST("/user/login", user.Login)
 	e.POST("/user/register", user.Register)
+
+	passenger := handler.Passenger{DB: db, Validator: vldt}
+	e.POST("/passengers", passenger.CreatePassenger, middleware.AuthMiddleware(cfg.JWT.SecretKey))
+	e.GET("/passengers", passenger.GetPassengers, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 
 	flightReservation := handler.FlightReservation{DB: db, Validator: vldt, APIMock: mockClient}
 	e.POST("/flights/reserve", flightReservation.Reserve)
