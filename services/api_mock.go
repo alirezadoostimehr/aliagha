@@ -42,7 +42,7 @@ type Airplane struct {
 }
 
 func (c *APIMockClient) GetFlights(depCity, arrCity, date string) ([]FlightResponse, error) {
-	url := c.BaseURL + "/flights" + fmt.Sprintf("?departure_city=%s&arrival_city%s&date=%s", depCity, arrCity, date)
+	url := c.BaseURL + "/flights" + fmt.Sprintf("?departure_city=%s&arrival_city=%s&date=%s", depCity, arrCity, date)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
