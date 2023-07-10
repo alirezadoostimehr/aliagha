@@ -1,0 +1,253 @@
+openapi: 3.0.0
+info:
+  title: aliagha
+  description: Backend for Flight booking website
+servers:
+  - url: http://localhost:3030
+paths:
+  /flights:
+    get:
+      summary: Get List Of Flights
+      requestBody:
+        required: true 
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetFlightsResponse'
+      parameters:
+        - in: query
+          name: departure_city
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: arrival_city
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+          required: true
+        - in: query
+          name: airline
+          schema:
+            type: string
+        - in: query
+          name: airplane_name
+          schema:
+            type: string
+        - in: query
+          name: departure_time_from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: departure_time_to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+        - in: query
+          name: sort_order
+          schema:
+            type: string
+        - in: query
+          name: remaining_seats
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK                
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error     
+  /user/login:
+    post:
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized 
+        '500':
+          description: Internal Server Error 
+  /user/register:
+    post:
+      summary: User registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request
+        '422':
+          description: Unprocessable Entity
+        '500':
+          description: Internal Server Error 
+  /passengers:
+    post:
+      summary: Create passenger
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePassengerRequest'
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request
+        '422':
+          description: Unprocessable Entity
+        '500':
+          description: Internal Server Error  
+    get:
+      summary: Get List Of User Passengers
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Internal Server Error          
+components:
+  schemas:
+    GetFlightsResponse:
+      type: object
+      properties:
+        flights:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlightResponse'
+    FlightResponse:
+      type: object
+      properties:
+        airline:
+          type: string
+        airplane:
+          $ref: '#/components/schemas/Airplane'
+        dep_time:
+          type: string
+          format: date-time
+        arr_time:
+          type: string
+          format: date-time
+        price:
+          type: number
+        remaining_seats:
+          type: integer
+    Airplane:
+      type: object
+      properties:
+        name:
+          type: string
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+    RegisterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        cellphone:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          maxLength: 20
+      required:
+        - name
+        - cellphone
+        - email
+        - password
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+    RegisterResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+    CreatePassengerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        national_code:
+          type: string
+          minLength: 10
+          maxLength: 10
+          pattern: '^[0-9]+$'
+        birth_date:
+          type: string
+          format: date
+      required:
+        - name
+        - national_code
+        - birth_date
+    CreatePassengerResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    GetPassengersResponse:
+      type: object
+      properties:
+        passengers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PassengerResponse'
+    PassengerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        u_id: 
+          type: integer
+          format: int32
+        national_code:
+          type: string
+        name:
+          type: string
+        birth_date:
+          type: string
+          format: date
