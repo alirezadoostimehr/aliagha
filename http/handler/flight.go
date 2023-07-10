@@ -29,9 +29,9 @@ type GetFlightsRequest struct {
 	FDate          time.Time
 	Airline        string `query:"airline"`
 	AirplaneName   string `query:"airplane_name"`
-	DeptimeFrom    string `query:"departure_time_from" validate:"datetime"`
+	DeptimeFrom    string `query:"departure_time_from"`
 	DepTimeF       time.Time
-	DeptimeTo      string `query:"departure_time_to" validate:"datetime"`
+	DeptimeTo      string `query:"departure_time_to"`
 	DeptimeT       time.Time
 	SortBy         string `query:"sort_by"`
 	SortOrder      string `query:"sort_order"`
@@ -49,7 +49,7 @@ func (req *GetFlightsRequest) Normalize() error {
 	}
 
 	if req.DeptimeFrom != "" {
-		date, err := utils.ParseDate(req.DeptimeFrom)
+		date, err := utils.ParseTime(req.FlightDate, req.DeptimeFrom)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func (req *GetFlightsRequest) Normalize() error {
 	}
 
 	if req.DeptimeTo != "" {
-		date, err := utils.ParseDate(req.DeptimeTo)
+		date, err := utils.ParseTime(req.FlightDate, req.DeptimeTo)
 		if err != nil {
 			return err
 		}
@@ -137,7 +137,6 @@ func (f *Flight) Get(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, flights)
 }
 
-// TODO: cover with unit tests
 func sortFlight(flights []services.FlightResponse, sortBy, sortOrder string) []services.FlightResponse {
 	if sortOrder == "" {
 		sortOrder = "asc"
@@ -203,10 +202,10 @@ func filterByAirplaneName(flights []services.FlightResponse, airplaneName string
 	return filteredFlights
 }
 
-func filterByDeptime(flights []services.FlightResponse, depTimeFrom, dapTimeTo time.Time) []services.FlightResponse {
+func filterByDeptime(flights []services.FlightResponse, depTimeFrom, depTimeTo time.Time) []services.FlightResponse {
 	var filteredFlights []services.FlightResponse
 	for _, flight := range flights {
-		if flight.DepTime.After(depTimeFrom) && flight.DepTime.Before(dapTimeTo) {
+		if flight.DepTime.After(depTimeFrom) && flight.DepTime.Before(depTimeTo) {
 			filteredFlights = append(filteredFlights, flight)
 		}
 	}
