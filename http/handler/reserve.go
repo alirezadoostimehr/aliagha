@@ -1,19 +1,23 @@
 package handler
 
 import (
+	"aliagha/config"
 	"aliagha/models"
 	"aliagha/services"
+	"aliagha/utils/gateways"
+	"net/http"
+	"strconv"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
-	"net/http"
-	"strconv"
 )
 
 type FlightReservation struct {
-	DB        *gorm.DB
-	Validator *validator.Validate
-	APIMock   services.APIMockClient
+	DB             *gorm.DB
+	ZarinpalConfig *config.Zarinpal
+	Validator      *validator.Validate
+	APIMock        services.APIMockClient
 }
 
 type FlightReservationRequest struct {
@@ -68,6 +72,7 @@ func (f *FlightReservation) Reserve(ctx echo.Context) error {
 		passengerIdsStr += strconv.Itoa((int)(passengerId))
 	}
 
+	var payment models.Payment
 	err = f.DB.Debug().Transaction(func(tx *gorm.DB) error {
 		ticket := models.Ticket{
 			UID:    req.UserId,
@@ -81,7 +86,7 @@ func (f *FlightReservation) Reserve(ctx echo.Context) error {
 			return err
 		}
 
-		payment := models.Payment{
+		payment = models.Payment{
 			UID:    req.UserId,
 			Type:   "ticket",
 			Ticket: ticket,
@@ -97,6 +102,20 @@ func (f *FlightReservation) Reserve(ctx echo.Context) error {
 
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
+	}
+
+	zarinpal, err := gateways.NewZarinpal("test", true)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	_, authority, err := zarinpal.NewPaymentRequest(int(req.FlightId), f.ZarinpalConfig.CallbackUrl, "", "", "")
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	if err := f.DB.Model(&models.Payment{}).Where("id = ?", payment.ID).Update("authority", authority).Error; err != nil {
+		return ctx.JSON(http.StatusUnprocessableEntity, "Payment failed")
 	}
 
 	return ctx.JSON(http.StatusOK, req)

@@ -15,6 +15,7 @@ type Config struct {
 	MockAPI        MockAPI
 	Security       Security
 	JWT            JWT
+	Zarinpal       Zarinpal
 }
 
 type Redis struct {
@@ -64,6 +65,11 @@ type Params struct {
 type JWT struct {
 	SecretKey string
 	ExpiresIn time.Duration
+}
+
+type Zarinpal struct {
+	MerchantId  string
+	CallbackUrl string
 }
 
 func Init(param Params) (*Config, error) {
@@ -124,6 +130,11 @@ func Init(param Params) (*Config, error) {
 		ExpiresIn: expiresIn,
 	}
 
+	zarinpal := &Zarinpal{
+		MerchantId:  viper.GetString("zarinpal.merchant_id"),
+		CallbackUrl: viper.GetString("zarinpal.callback_url"),
+	}
+
 	return &Config{
 		Redis:          *redis,
 		Database:       *database,
@@ -132,5 +143,6 @@ func Init(param Params) (*Config, error) {
 		MockAPI:        *mockAPI,
 		Security:       *security,
 		JWT:            *jwt,
+		Zarinpal:       *zarinpal,
 	}, nil
 }
