@@ -9,6 +9,7 @@ type Payment struct {
 	Type      string    `gorm:"column:type;not null" json:"type"`
 	TicketID  int32     `gorm:"column:ticket_id;not null" json:"ticket_id"`
 	Ticket    Ticket    `gorm:"foreignKey:TicketID"`
+	Status    string    `gorm:"column:status;not null" json:"status"`
 	CreatedAt time.Time `gorm:"column:created_at;default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at;default:CURRENT_TIMESTAMP" json:"updated_at"`
 }

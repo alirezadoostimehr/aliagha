@@ -72,7 +72,6 @@ func (req *GetFlightsRequest) Normalize() error {
 func (f *Flight) Get(ctx echo.Context) error {
 	var req GetFlightsRequest
 	if err := ctx.Bind(&req); err != nil {
-		fmt.Println(err)
 		return ctx.NoContent(http.StatusBadRequest)
 	}
 
@@ -137,7 +136,6 @@ func (f *Flight) Get(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, flights)
 }
 
-// TODO: cover with unit tests
 func sortFlight(flights []services.FlightResponse, sortBy, sortOrder string) []services.FlightResponse {
 	if sortOrder == "" {
 		sortOrder = "asc"
