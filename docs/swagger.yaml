@@ -1,0 +1,97 @@
+swagger: "2.0"
+openapi: 3.0.0
+info:
+  title: Your API Title
+  description: Backend for Flight booking website
+  version: 1.0.0
+servers:
+  - url: http://localhost:3030
+paths:
+  /flights:
+    get:
+      summary: Get flights
+      parameters:
+        - in: query
+          name: departure_city
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: arrival_city
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+          required: true
+        - in: query
+          name: airline
+          schema:
+            type: string
+        - in: query
+          name: airplane_name
+          schema:
+            type: string
+        - in: query
+          name: departure_time_from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: departure_time_to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+        - in: query
+          name: sort_order
+          schema:
+            type: string
+        - in: query
+          name: remaining_seats
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetFlightsResponse'
+components:
+  schemas:
+    GetFlightsResponse:
+      type: object
+      properties:
+        flights:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlightResponse'
+    FlightResponse:
+      type: object
+      properties:
+        airline:
+          type: string
+        airplane:
+          $ref: '#/components/schemas/Airplane'
+        dep_time:
+          type: string
+          format: date-time
+        arr_time:
+          type: string
+          format: date-time
+        price:
+          type: number
+        remaining_seats:
+          type: integer
+    Airplane:
+      type: object
+      properties:
+        name:
+          type: string
