@@ -80,7 +80,7 @@ func startServer() {
 	e.GET("/passengers", passenger.GetPassengers, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 
 	flightReservation := handler.FlightReservation{DB: db, Validator: vldt, APIMock: mockClient}
-	e.POST("/flights/reserve", flightReservation.Reserve)
+	e.POST("/flights/reserve", flightReservation.Reserve, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 
 	err = e.Start("localhost:3030")
 	if err != nil {

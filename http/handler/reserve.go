@@ -5,12 +5,11 @@ import (
 	"aliagha/models"
 	"aliagha/services"
 	"aliagha/utils/gateways"
-	"net/http"
-	"strconv"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"net/http"
+	"strconv"
 )
 
 type FlightReservation struct {
@@ -74,6 +73,24 @@ func (f *FlightReservation) Reserve(ctx echo.Context) error {
 
 	var payment models.Payment
 	err = f.DB.Debug().Transaction(func(tx *gorm.DB) error {
+		flight := models.Flight{
+			ID:               flightInfo.ID,
+			DepCity:          models.City{ID: flightInfo.DepCity.ID, Name: flightInfo.DepCity.Name},
+			ArrCity:          models.City{ID: flightInfo.ArrCity.ID, Name: flightInfo.ArrCity.Name},
+			DepTime:          flightInfo.DepTime,
+			ArrTime:          flightInfo.ArrTime,
+			Airplane:         models.Airplane{ID: flightInfo.Airplane.ID, Name: flightInfo.Airplane.Name},
+			Airline:          flightInfo.Airline,
+			CxlSitID:         flightInfo.CxlSitID,
+			FlightClass:      flightInfo.FlightClass,
+			BaggageAllowance: flightInfo.BaggageAllowance,
+			MealService:      flightInfo.MealService,
+			Gate:             flightInfo.Gate,
+		}
+		if err := tx.Debug().Model(&models.Flight{}).Create(&flight).Error; err != nil {
+			return err
+		}
+
 		ticket := models.Ticket{
 			UID:    req.UserId,
 			PIDs:   passengerIdsStr,
