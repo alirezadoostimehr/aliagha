@@ -19,14 +19,12 @@ type APIMockClient struct {
 	Timeout time.Duration
 }
 
-// TODO: remove date
 type FlightResponse struct {
 	ID             int32     `json:"id"`
 	DepCity        City      `json:"dep_city"`
 	ArrCity        City      `json:"arr_city"`
 	DepTime        time.Time `json:"dep_time"`
 	ArrTime        time.Time `json:"arr_time"`
-	Date           time.Time `json:"date"`
 	Airplane       Airplane  `json:"airplane"`
 	Airline        string    `json:"airline"`
 	Price          int32     `json:"price"`
@@ -151,9 +149,21 @@ func (c *APIMockClient) Cancel(flightId, cnt int32) error {
 	return err
 }
 
-// TODO: get this from api mock code
 type FlightInfoResponse struct {
-	Price int32
+	ID               int32     `json:"id"`
+	DepCity          City      `json:"dep_city"`
+	ArrCity          City      `json:"arr_city"`
+	DepTime          time.Time `json:"dep_time"`
+	ArrTime          time.Time `json:"arr_time"`
+	Airplane         Airplane  `json:"airplane"`
+	Airline          string    `json:"airline"`
+	Price            int32     `json:"price"`
+	CxlSitID         int32     `json:"cxl_sit_id"`
+	RemainingSeats   int32     `json:"remaining_seats"`
+	FlightClass      string    `json:"flight_class"`
+	BaggageAllowance string    `json:"baggage_allowance"`
+	MealService      string    `json:"meal_service"`
+	Gate             string    `json:"gate"`
 }
 
 func (c *APIMockClient) GetFlightInfo(flightId int32) (FlightInfoResponse, error) {
