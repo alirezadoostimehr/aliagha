@@ -87,7 +87,7 @@ func (f *FlightReservation) Reserve(ctx echo.Context) error {
 			MealService:      flightInfo.MealService,
 			Gate:             flightInfo.Gate,
 		}
-		if err := tx.Debug().Model(&models.Flight{}).Create(&flight).Error; err != nil {
+		if err := tx.Debug().Model(&models.Flight{}).Create(&flight).Error; err != nil && err != gorm.ErrDuplicatedKey {
 			return err
 		}
 
