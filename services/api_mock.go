@@ -206,3 +206,99 @@ func (c *APIMockClient) GetFlightInfo(flightId int32) (FlightInfoResponse, error
 
 	return flight, nil
 }
+
+type GetCityResponse struct {
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
+}
+
+func (c *APIMockClient) GetCities() ([]GetCityResponse, error) {
+	url := c.BaseURL + "/cities"
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []GetCityResponse
+	err = c.Breaker.Run(func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		response, err := c.Client.Do(req)
+		if err != nil {
+			return fmt.Errorf("apimock_get_cities: request failed, error: %v", err.Error())
+		}
+
+		responseBody, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return fmt.Errorf("apimock_get_cities: reading response failed, error: %v", err.Error())
+		}
+
+		if response.StatusCode != http.StatusOK {
+			return fmt.Errorf("apimock_get_cities: request failed, error: %v", err.Error())
+		}
+
+		if err := json.Unmarshal(responseBody, &resp); err != nil {
+			return fmt.Errorf("apimock_get_cities: parsing response body failed, error: %v", err.Error())
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+type GetAirplaneResponse struct {
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
+}
+
+func (c *APIMockClient) GetAirplanes() ([]GetAirplaneResponse, error) {
+	url := c.BaseURL + "/airplanes"
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []GetAirplaneResponse
+	err = c.Breaker.Run(func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		response, err := c.Client.Do(req)
+		if err != nil {
+			return fmt.Errorf("apimock_get_airplanes: request failed, error: %v", err.Error())
+		}
+
+		responseBody, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return fmt.Errorf("apimock_get_airplanes: reading response failed, error: %v", err.Error())
+		}
+
+		if response.StatusCode != http.StatusOK {
+			return fmt.Errorf("apimock_get_airplanes: request failed, error: %v", err.Error())
+		}
+
+		if err := json.Unmarshal(responseBody, &resp); err != nil {
+			return fmt.Errorf("apimock_get_airplanes: parsing response body failed, error: %v", err.Error())
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
