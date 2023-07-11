@@ -21,7 +21,7 @@ type FlightReservation struct {
 }
 
 type FlightReservationRequest struct {
-	UserId       int32   `json:"user_id"` // Should be taken from context
+	UserId       int32
 	FlightId     int32   `json:"flight_id" validate:"required"`
 	PassengerIds []int32 `json:"passenger_ids" validate:"required"`
 }
@@ -36,7 +36,7 @@ func (f *FlightReservation) Reserve(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, "Bad Request")
 	}
 
-	//req.UserId = ctx.Get("user_id").(int)
+	req.UserId = ctx.Get("user_id").(int32)
 	for _, passengerId := range req.PassengerIds {
 		var exists bool
 		err := f.DB.
