@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/eapache/go-resiliency/breaker"
@@ -90,9 +91,11 @@ func (c *APIMockClient) GetFlights(depCity, arrCity, date string) ([]FlightRespo
 }
 
 func (c *APIMockClient) Reserve(flightId, cnt int32) error {
-	url := c.BaseURL + fmt.Sprintf("/flights/reserve?flight_id=%d&count=%d", flightId, cnt)
+	url := c.BaseURL + "/flights/reserve"
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	reqBody := fmt.Sprintf(`{"flight_id": %d, "count": %d}`, flightId, cnt)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		return err
 	}
@@ -119,9 +122,11 @@ func (c *APIMockClient) Reserve(flightId, cnt int32) error {
 }
 
 func (c *APIMockClient) Cancel(flightId, cnt int32) error {
-	url := c.BaseURL + fmt.Sprintf("/flights/cancel?flight_id=%d&count=%d", flightId, cnt)
+	url := c.BaseURL + "/flights/cancel"
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	reqBody := fmt.Sprintf(`{"flight_id": %d, "count": %d}`, flightId, cnt)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		return err
 	}
