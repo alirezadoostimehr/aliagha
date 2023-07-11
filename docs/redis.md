@@ -1,93 +1,36 @@
 # Redis
 Redis is an open-source, in-memory data structure store that can be used as a database, cache, and message broker. It provides high performance, scalability, and flexibility, making it a popular choice for various use cases.
 
-## Installation
-To use Redis in your Go application, you need to install the Redis server and the github.com/go-redis/redis package. Follow these steps to get started:
+# init
+The InitRedis function in the database package initializes and connects to a Redis database based on the provided configuration. It establishes a connection to the Redis server and returns a Redis client that can be used for interacting with the Redis database.
 
-    Install Redis server by following the instructions provided in the official Redis documentation: https://redis.io/download
-    Open your terminal or command prompt.
-    Run the following command to install the github.com/go-redis/redis package:
+## Redis Initialization
+The InitRedis function in the database package is responsible for initializing and connecting to a Redis database based on the provided Redis configuration.
 
-        go get github.com/go-redis/redis
+## Redis Client Initialization
+The InitRedis function takes a redisConfig parameter of type *config.Redis, which contains the Redis configuration parameters such as host, port, user, password and TTL. It creates a new Redis client using the redis.NewClient function with the provided configuration options.
 
-## Usage
-Once you have installed Redis and the github.com/go-redis/redis package, you can start using Redis in your Go application. Here's an example of how to connect to Redis, set a key-value pair, and retrieve the value:
+## Connecting to Redis
+After creating the Redis client, the Ping method is called on the client to establish a connection to the Redis server. If the connection is successful, the Ping method returns a "PONG" response. If there is an error connecting to Redis, the function panics with an error message.
 
-package main
+# Mock redis 
+The NewRedisMock function creates a mock Redis server and a Redis client for testing purposes. This allows for testing Redis-related functionality without the need for a real Redis server
 
-import (
-"fmt"
-"github.com/go-redis/redis"
-)
+## Redis Mock Initialization
+The NewRedisMock function in the database package is responsible for creating a mock Redis server and a Redis client for testing purposes.
 
-func main() {
-// Create a new Redis client
-client := redis.NewClient(&redis.Options{
-Addr:     "localhost:6379", 
-Password: "",               
-DB:       0,               
-})
+## Mock Redis Server
+The NewRedisMock function uses the miniredis.Run function to start a mock Redis server. The mock server is a lightweight in-memory Redis server that can be used for testing without the need for a real Redis server.
 
-// Ping the Redis server to check the connection
-pong, err := client.Ping().Result()
-if err != nil {
-fmt.Println("Error connecting to Redis:", err)
-return
-}
-fmt.Println("Connected to Redis:", pong)
+## Redis Client for Mock Server
+After starting the mock Redis server, the function creates a Redis client using the redis.NewClient function and the address of the mock server obtained from server.Addr().
 
-// Set a key-value pair
-err = client.Set("mykey", "myvalue", 0).Err()
-if err != nil {
-fmt.Println("Error setting key:", err)
-return
-}
+# Redis usage in this project 
+The Flight handler in the project package is responsible for handling flight-related requests. It utilizes Redis for caching flight data and improving performance. The Following documentation will guide you through the Redis usage in the Flight handler.
 
-// Get the value for a key
-value, err := client.Get("mykey").Result()
-if err != nil {
-fmt.Println("Error getting value:", err)
-return
-}
-fmt.Println("Value:", value)
-}
+## Caching Flight Data
+The Get method in the Flight handler retrieves flight data from the Redis cache if available. It uses a cache key generated based on the request parameters, such as departure city, arrival city, and flight date. The cache key is used to retrieve the cached flight data from Redis using the Get method of the Redis client.
+If the flight data is not found in the cache (indicated by the redis.Nil error), the flight data is fetched from an external API using the APIMock client. The fetched flight data is then stored (for a time specified by TTL in config) in the Redis cache using the Set method of the Redis client, with the cache key and a JSON representation of the flight data as the parameters.
 
-In the example above, a new Redis client is created, connect to the Redis server, set a key-value pair, and retrieve the value. 
-
-## Features
-The github.com/go-redis/redis package provides a wide range of features to work with Redis. Some of the key features include:
-
-    Connection Management:
-        Connect to a Redis server using various options like address, password, and database number.
-        Ping the Redis server to check the connection status.
-    Key-Value Operations:
-        Set a key-value pair.
-        Get the value for a key.
-        Delete a key.
-        Check if a key exists.
-    List Operations:
-        Push elements to a list.
-        Pop elements from a list.
-        Get the length of a list.
-    Set Operations:
-        Add elements to a set.
-        Remove elements from a set.
-        Check if an element exists in a set.
-    Sorted Set Operations:
-        Add elements to a sorted set with scores.
-        Retrieve elements from a sorted set based on scores.
-    Hash Operations:
-        Set field-value pairs in a hash.
-        Get the value for a field in a hash.
-        Get all field-value pairs in a hash.
-    Pub/Sub Messaging:
-        Publish messages to a channel.
-        Subscribe to channels and receive messages.
-    Transactions:
-        Execute multiple commands as a single transaction.
-    Pipelining:
-        Send multiple commands to the Redis server in a single round-trip.
-    Lua Scripting:
-        Execute Lua scripts on the Redis server.
-    Connection Pooling:
-        Manage multiple Redis connections efficiently.
+## Redis Error Handling
+In case of any errors during Redis operations, appropriate error responses are returned to the client. For example, if there is an error retrieving flight data from the Redis cache or storing flight data in the cache, the Get method returns an internal server error response.
