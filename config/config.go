@@ -48,7 +48,6 @@ type PaymentGateway struct {
 
 type MockAPI struct {
 	URL     string
-	ApiKey  string
 	Timeout time.Duration
 }
 
@@ -110,7 +109,6 @@ func Init(param Params) (*Config, error) {
 
 	mockAPI := &MockAPI{
 		URL:     viper.GetString("mock_api.url"),
-		ApiKey:  viper.GetString("mock_api.api_key"),
 		Timeout: viper.GetDuration("mock_api.timeout"),
 	}
 

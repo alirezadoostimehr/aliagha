@@ -3,8 +3,8 @@ redis:
   host: localhost
   port: 6379
   username: dbcache
-  password: "dbpassword"
-  TTL: 1 * time.Minute 
+  password: ""
+  TTL: 1s
 # database configuration
 database:  
   driver: mysql
@@ -25,9 +25,8 @@ payment_gateway:
   api_secret: myapisecret
 # Mock API configuration
 mock_api:
-  url: https://mockapi.com/api
-  api_key: myauthkey
-  timeout: 1 * time.Second
+  url: "http://127.0.0.1:8000"
+  timeout: 10s
 # Security configuration
 security:
   secret_key: mysecretkey
