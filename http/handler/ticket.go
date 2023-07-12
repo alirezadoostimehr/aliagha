@@ -2,8 +2,10 @@ package handler
 
 import (
 	"aliagha/models"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -44,15 +46,14 @@ type FlightResponse struct {
 
 type TicketResponse struct {
 	ID        int32 `json:"id"`
-	PID       int32 `json:"p_id"`
-	Passenger PassengerResponse
-	FID       int32 `json:"f_id"`
+	Passenger []PassengerResponse
 	Flight    FlightResponse
 	Status    string `json:"status"`
 }
 
 func (t *Ticket) GetTickets(ctx echo.Context) error {
 	UID, err := strconv.Atoi(ctx.Get("user_id").(string))
+	log.Print(UID)
 
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, err.Error())
@@ -66,23 +67,26 @@ func (t *Ticket) GetTickets(ctx echo.Context) error {
 	}
 
 	resp := make([]TicketResponse, 0, len(tickets))
-	var passenger PassengerResponse
+
+	var passengers []PassengerResponse
 	var flight FlightResponse
 
 	for _, ticket := range tickets {
-		err := t.DB.Model(&models.Ticket{}).Where("p_id = ?", ticket.PID).Find(&passenger).Error
-		if err != nil {
-			return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve tickets")
-		}
 
-		err = t.DB.Model(&models.Ticket{}).Where("f_id = ?", ticket.FID).Find(&flight).Error
+		err := t.DB.Model(&models.Ticket{}).Where("id IN (?)", strings.Split(ticket.PIDs, ",")).Find(&passengers).Error
+		if err != nil {
+			return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve passegers")
+		}
+		log.Print(passengers)
+
+		err = t.DB.Model(&models.Ticket{}).Joins("Flight").Where("f_id = ?", ticket.FID).First(&flight).Error
 		if err != nil {
 			return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve flights")
 		}
 
 		resp = append(resp, TicketResponse{
 			ID:        ticket.ID,
-			Passenger: passenger,
+			Passenger: passengers,
 			Flight:    flight,
 			Status:    ticket.Status,
 		})
