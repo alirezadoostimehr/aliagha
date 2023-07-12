@@ -4,7 +4,7 @@ redis:
   port: 6379
   username: dbcache
   password: ""
-  TTL: 1s
+  TTL: 2s
 # database configuration
 database:  
   driver: mysql
