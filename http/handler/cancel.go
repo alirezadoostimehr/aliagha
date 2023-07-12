@@ -25,11 +25,7 @@ type CancelRequest struct {
 
 func (c *Cancel) Get(ctx echo.Context) error {
 	var req CancelRequest
-	// UID, err1 := strconv.Atoi(ctx.Get("user_id").(string))
-	// if err1 != nil {
-	// 	return ctx.JSON(http.StatusBadRequest, err.Error())
-	// }
-	// req.UserID = UID
+
 	if err := ctx.Bind(&req); err != nil {
 		return ctx.NoContent(http.StatusBadRequest)
 	}
@@ -48,11 +44,7 @@ func (c *Cancel) Get(ctx echo.Context) error {
 		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
 	}
 
-	// return_policy := ticket.Flight.CxlSitId.Data
-	// price := ticket.Flight.Price
-	// return_amount := return_policy * price
-	// todo: add price to peyment/ticket for returning
-
+	// ticket.Price *= ticket.Flight.CxlSitId.Data
 	// payment := models.Payment{
 	// 	UID:    req.UserID,
 	// 	Type:   "ticket-cancelation",
