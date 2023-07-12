@@ -79,5 +79,8 @@ func startServer() {
 	e.POST("/passengers", passenger.CreatePassenger, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 	e.GET("/passengers", passenger.GetPassengers, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 
-	e.Start("localhost:3030")
+	err = e.Start("localhost:3030")
+	if err != nil {
+		panic(err)
+	}
 }
