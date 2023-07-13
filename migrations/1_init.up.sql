@@ -54,7 +54,6 @@ CREATE TABLE IF NOT EXISTS flights (
     airplane_id int NOT NULL ,
     airline varchar(255) NOT NULL ,
     cxl_sit_id int NOT NULL ,
-    remaining_seats int NOT NULL,
     flight_class varchar(255) NOT NULL ,
     baggage_allowance varchar(255) NOT NULL ,
     meal_service varchar(255) NOT NULL,
@@ -85,7 +84,7 @@ CREATE TABLE IF NOT EXISTS tickets (
 CREATE TABLE IF NOT EXISTS payments (
     id int PRIMARY KEY AUTO_INCREMENT,
     u_id int NOT NULL ,
-    type text NOT NULL ,
+    classification text NOT NULL ,
     ticket_id int NOT NULL ,
     status varchar(255) NOT NULL ,
     created_at datetime DEFAULT NOW() ,

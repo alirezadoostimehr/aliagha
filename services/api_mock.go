@@ -111,7 +111,7 @@ func (c *APIMockClient) Reserve(flightId, cnt int32) error {
 			return fmt.Errorf("apimock_post_reserve: request failed, error: %v", err.Error())
 		}
 
-		if response.StatusCode != http.StatusOK {
+		if response.StatusCode != http.StatusAccepted {
 			return fmt.Errorf("apimock_post_reserve: request failed, error: %v", err.Error())
 		}
 
@@ -170,9 +170,11 @@ type FlightInfoResponse struct {
 }
 
 func (c *APIMockClient) GetFlightInfo(flightId int32) (FlightInfoResponse, error) {
-	url := c.BaseURL + fmt.Sprintf("/flight?flight_id=%d", flightId)
+	url := c.BaseURL + "/flights/detail"
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	reqBody := fmt.Sprintf(`{"flight_id": %d}`, flightId)
+	req, err := http.NewRequest(http.MethodGet, url, strings.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		return FlightInfoResponse{}, err
 	}

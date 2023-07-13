@@ -31,6 +31,12 @@ type paymentRequestResp struct {
 	Authority string
 }
 
+type PaymentVerificationResult struct {
+	Verified   bool
+	RefID      string
+	StatusCode int
+}
+
 type paymentVerificationReqBody struct {
 	MerchantID string
 	Authority  string
@@ -145,15 +151,14 @@ func (zarinpal *Zarinpal) NewPaymentRequest(amount int, callbackURL string, desc
 // on their end and you can check the error code and its reason
 // based on their documentation placed in
 // https://github.com/ZarinPal-Lab/Documentation-PaymentGateway/archive/master.zip
-func (zarinpal *Zarinpal) PaymentVerification(amount int, authority string) (verified bool, refID string, statusCode int, err error) {
+func (zarinpal *Zarinpal) PaymentVerification(amount int, authority string) (result PaymentVerificationResult, err error) {
 	if amount <= 0 {
-		err = errors.New("amount must be a positive number")
-		return
+		return result, errors.New("amount must be a positive number")
 	}
 	if authority == "" {
-		err = errors.New("authority should not be empty")
-		return
+		return result, errors.New("authority should not be empty")
 	}
+
 	paymentVerification := paymentVerificationReqBody{
 		MerchantID: zarinpal.MerchantID,
 		Amount:     amount,
@@ -162,16 +167,18 @@ func (zarinpal *Zarinpal) PaymentVerification(amount int, authority string) (ver
 	var resp paymentVerificationResp
 	err = zarinpal.request("PaymentVerification.json", &paymentVerification, &resp)
 	if err != nil {
-		return
+		return result, err
 	}
-	statusCode = resp.Status
+
+	result.StatusCode = resp.Status
 	if resp.Status == 100 {
-		verified = true
-		refID = string(resp.RefID)
+		result.Verified = true
+		result.RefID = string(resp.RefID)
 	} else {
-		err = errors.New(strconv.Itoa(resp.Status))
+		err = errors.New("payment verification failed: " + strconv.Itoa(resp.Status))
 	}
-	return
+
+	return result, err
 }
 
 // UnverifiedTransactions gets unverified transactions.

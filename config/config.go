@@ -69,6 +69,7 @@ type JWT struct {
 type Zarinpal struct {
 	MerchantId  string
 	CallbackUrl string
+	SandBox     bool
 }
 
 func Init(param Params) (*Config, error) {
@@ -131,6 +132,7 @@ func Init(param Params) (*Config, error) {
 	zarinpal := &Zarinpal{
 		MerchantId:  viper.GetString("zarinpal.merchant_id"),
 		CallbackUrl: viper.GetString("zarinpal.callback_url"),
+		SandBox:     viper.GetBool("zarinpal.sand_box"),
 	}
 
 	return &Config{

@@ -5,11 +5,12 @@ import (
 	"aliagha/models"
 	"aliagha/services"
 	"aliagha/utils/gateways"
+	"net/http"
+	"strconv"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
-	"net/http"
-	"strconv"
 )
 
 type FlightReservation struct {
@@ -25,17 +26,30 @@ type FlightReservationRequest struct {
 	PassengerIds []int32 `json:"passenger_ids" validate:"required"`
 }
 
+type FlightReservationResponse struct {
+	PaymentUrl string `json:"token"`
+}
+
+type ReserveVerificationRequest struct {
+	Authority string `json:"token"`
+}
+
 func (f *FlightReservation) Reserve(ctx echo.Context) error {
 	var req FlightReservationRequest
 	if err := ctx.Bind(&req); err != nil {
-		return ctx.JSON(http.StatusBadRequest, "Bad Request")
+		return ctx.JSON(http.StatusBadRequest, "Binding Error")
 	}
 
 	if err := f.Validator.Struct(&req); err != nil {
-		return ctx.JSON(http.StatusBadRequest, "Bad Request")
+		return ctx.JSON(http.StatusBadRequest, error.Error)
 	}
 
-	req.UserId = ctx.Get("user_id").(int32)
+	userId, err := strconv.Atoi(ctx.Get("user_id").(string))
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
+	}
+
+	req.UserId = int32(userId)
 	for _, passengerId := range req.PassengerIds {
 		var exists bool
 		err := f.DB.
@@ -104,10 +118,10 @@ func (f *FlightReservation) Reserve(ctx echo.Context) error {
 		}
 
 		payment = models.Payment{
-			UID:    req.UserId,
-			Type:   "ticket",
-			Ticket: ticket,
-			Status: "pending",
+			UID:            req.UserId,
+			Classification: "ticket",
+			Ticket:         ticket,
+			Status:         "pending",
 		}
 
 		if err := tx.Debug().Model(&models.Payment{}).Create(&payment).Error; err != nil {
@@ -121,19 +135,57 @@ func (f *FlightReservation) Reserve(ctx echo.Context) error {
 		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
 	}
 
-	zarinpal, err := gateways.NewZarinpal("test", true)
+	zarinpal, err := gateways.NewZarinpal(f.ZarinpalConfig.MerchantId, f.ZarinpalConfig.SandBox)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, err.Error())
 	}
 
-	_, authority, err := zarinpal.NewPaymentRequest(int(req.FlightId), f.ZarinpalConfig.CallbackUrl, "", "", "")
+	paymentUrl, authority, err := zarinpal.NewPaymentRequest(int(req.FlightId), f.ZarinpalConfig.CallbackUrl, "", "", "")
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, err.Error())
 	}
 
-	if err := f.DB.Model(&models.Payment{}).Where("id = ?", payment.ID).Update("authority", authority).Error; err != nil {
+	if err := f.DB.Model(&models.Payment{}).Where("id = ?", payment.ID).Update("trans_id", authority).Error; err != nil {
 		return ctx.JSON(http.StatusUnprocessableEntity, "Payment failed")
 	}
 
-	return ctx.JSON(http.StatusOK, req)
+	return ctx.JSON(http.StatusOK, FlightReservationResponse{
+		PaymentUrl: paymentUrl,
+	})
+}
+
+func (f *FlightReservation) VerifyPayment(ctx echo.Context) error {
+	var req ReserveVerificationRequest
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, "Bad Request")
+	}
+
+	zarinpal, err := gateways.NewZarinpal(f.ZarinpalConfig.MerchantId, f.ZarinpalConfig.SandBox)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	var payment models.Payment
+
+	if err := f.DB.Model(&models.Payment{}).Where("trans_id = ?", req.Authority).First(&payment).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, "Payment not found")
+	}
+
+	var ticket models.Ticket
+	if err := f.DB.Model(&payment).Association("Ticket").Find(&ticket); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	result, err := zarinpal.PaymentVerification(int(ticket.Price), req.Authority)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	if err := f.DB.Model(&models.Payment{}).Where("id = ?", payment.ID).Updates(map[string]interface{}{
+		"ref_id": result.RefID,
+		"status": "verified",
+	}).Error; err != nil {
+		return ctx.JSON(http.StatusUnprocessableEntity, "Payment failed")
+	}
+	return nil
 }
