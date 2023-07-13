@@ -32,13 +32,14 @@ func (p *Passenger) CreatePassenger(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, err.Error())
 	}
+
 	var req CreatePassengerRequest
 	if err := ctx.Bind(&req); err != nil {
-		return ctx.JSON(http.StatusBadRequest, "Bad Request")
+		return ctx.JSON(http.StatusBadRequest, "Binding Error")
 	}
 
 	if err := p.Validator.Struct(&req); err != nil {
-		return ctx.JSON(http.StatusUnprocessableEntity, err.Error())
+		return ctx.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	birthDate, err := utils.ParseDate(req.Birthdate)
@@ -66,7 +67,7 @@ func (p *Passenger) CreatePassenger(ctx echo.Context) error {
 		UpdatedAt:    time.Now(),
 	}
 
-	if p.DB.Create(&passenger).Error != nil {
+	if p.DB.Debug().Model(&models.Passenger{}).Create(&passenger).Error != nil {
 		return ctx.JSON(http.StatusInternalServerError, "Failed to create passenger")
 	}
 
@@ -107,7 +108,7 @@ func (p *Passenger) GetPassengers(ctx echo.Context) error {
 			UID:          passenger.UID,
 			NationalCode: passenger.NationalCode,
 			Name:         passenger.Name,
-			Birthdate:    passenger.Birthdate.Format("2003-02-01"),
+			Birthdate:    passenger.Birthdate.Format("2006-01-02"),
 		})
 	}
 	return ctx.JSON(http.StatusOK, GetPassengersResponse{

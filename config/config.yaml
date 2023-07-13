@@ -25,8 +25,9 @@ payment_gateway:
   api_secret: myapisecret
 # Mock API configuration
 mock_api:
-  url: "http://127.0.0.1:8000"
-  timeout: 10s
+  url: https://mockapi.com/api
+  api_key: myauthkey
+  timeout: 1 * time.Second
 # Security configuration
 security:
   secret_key: mysecretkey
@@ -35,3 +36,8 @@ security:
 jwt:
   secret_key: "mysecretkey"
   expires_in: 24m
+# Zarinpal gateway configuration
+zarinpal:
+  sand_box : 0
+  merchant_id: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+  callback_url: /payment/callback 
