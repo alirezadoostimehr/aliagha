@@ -82,5 +82,8 @@ func startServer() {
 	ticket := handler.Ticket{DB: db}
 	e.GET("/tickets", ticket.GetTickets, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 
-	e.Start("localhost:3030")
+	err = e.Start("localhost:3030")
+	if err != nil {
+		panic(err)
+	}
 }
