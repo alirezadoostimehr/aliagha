@@ -7,14 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
 type Ticket struct {
-	DB        *gorm.DB
-	Validator *validator.Validate
+	DB *gorm.DB
 }
 
 type GetTicketsResponse struct {
@@ -54,7 +52,7 @@ func (t *Ticket) GetTickets(ctx echo.Context) error {
 	UID, err := strconv.Atoi(ctx.Get("user_id").(string))
 
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, err.Error())
+		return ctx.JSON(http.StatusInternalServerError, "Internal Server Error")
 	}
 
 	var tickets []models.Ticket
@@ -65,7 +63,7 @@ func (t *Ticket) GetTickets(ctx echo.Context) error {
 		Find(&tickets)
 
 	if result.Error != nil {
-		return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve tickets")
+		return ctx.JSON(http.StatusInternalServerError, "Failed to Retrieve Tickets")
 	}
 
 	resp := make([]TicketResponse, 0, len(tickets))
@@ -74,11 +72,11 @@ func (t *Ticket) GetTickets(ctx echo.Context) error {
 
 	for _, ticket := range tickets {
 
-		err := t.DB.Debug().Model(&models.Passenger{}).Select("*").
+		err := t.DB.Debug().Model(&models.Passenger{}).
 			Where("u_id = ? AND id IN (?)", UID, strings.Split(ticket.PIDs, ",")).
 			Find(&passengers).Error
 		if err != nil {
-			return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve passegers")
+			return ctx.JSON(http.StatusInternalServerError, "Failed to Retrieve Passegers")
 		}
 
 		passengerResponse := make([]PassengerResponse, 0, len(passengers))
@@ -99,7 +97,7 @@ func (t *Ticket) GetTickets(ctx echo.Context) error {
 			Where("flights.id = ?", ticket.FID).
 			First(&flight).Error
 		if err != nil {
-			return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve passegers")
+			return ctx.JSON(http.StatusInternalServerError, "Failed to Retrieve Flights")
 		}
 
 		flightResponse := FlightResponse{
@@ -112,10 +110,6 @@ func (t *Ticket) GetTickets(ctx echo.Context) error {
 			Airline:  flight.Airline,
 			Price:    flight.Price,
 			CxlSitID: flight.CxlSitID,
-		}
-
-		if err != nil {
-			return ctx.JSON(http.StatusInternalServerError, "Failed to retrieve flights")
 		}
 
 		resp = append(resp, TicketResponse{
