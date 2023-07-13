@@ -18,10 +18,10 @@ cd "$PROJECT_DIR" || exit
 "$GO_BIN" build -o mycommand .
 
 # Take down existing migrations 
-./mycommand migrate -c ./config -a down -f ./migrations
+./mycommand migrate -c config -a down -f migrations
 
 # Run the migrate command
-./mycommand migrate -c ./config -a up -f ./migrations
+./mycommand migrate -c config -a up -f migrations
 
 # Run the serve command
 ./mycommand serve -c ./config
