@@ -79,6 +79,9 @@ func startServer() {
 	e.POST("/passengers", passenger.CreatePassenger, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 	e.GET("/passengers", passenger.GetPassengers, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 
+	ticket := handler.Ticket{DB: db}
+	e.GET("/tickets", ticket.GetTickets, middleware.AuthMiddleware(cfg.JWT.SecretKey))
+
 	flightReservation := handler.FlightReservation{DB: db, Validator: vldt, APIMock: mockClient}
 	e.POST("/flights/reserve", flightReservation.Reserve, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 

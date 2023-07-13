@@ -93,7 +93,7 @@ func (u *User) Register(ctx echo.Context) error {
 	err := u.DB.Model(&models.User{}).Where("email = ?", req.Email).First(&user).Error
 
 	if err == nil {
-		return ctx.JSON(http.StatusUnprocessableEntity, "Email already exists")
+		return ctx.JSON(http.StatusBadRequest, "Email already exists")
 	}
 
 	if err != nil && err != gorm.ErrRecordNotFound {

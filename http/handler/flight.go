@@ -26,7 +26,6 @@ type GetFlightsRequest struct {
 	DepartureCity  string `query:"departure_city" validate:"required"`
 	ArrivalCity    string `query:"arrival_city" validate:"required"`
 	FlightDate     string `query:"date" validate:"required"`
-	FDate          time.Time
 	Airline        string `query:"airline"`
 	AirplaneName   string `query:"airplane_name"`
 	DeptimeFrom    string `query:"departure_time_from"`
@@ -39,14 +38,6 @@ type GetFlightsRequest struct {
 }
 
 func (req *GetFlightsRequest) Normalize() error {
-	if req.FlightDate != "" {
-		date, err := utils.ParseDate(req.FlightDate)
-		if err != nil {
-			return err
-		}
-
-		req.FDate = date
-	}
 
 	if req.DeptimeFrom != "" {
 		date, err := utils.ParseTime(req.FlightDate, req.DeptimeFrom)
