@@ -79,6 +79,9 @@ func startServer() {
 	e.POST("/passengers", passenger.CreatePassenger, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 	e.GET("/passengers", passenger.GetPassengers, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 
+	ticket := handler.Ticket{DB: db}
+	e.GET("/tickets", ticket.GetTickets, middleware.AuthMiddleware(cfg.JWT.SecretKey))
+
 	err = e.Start("localhost:3030")
 	if err != nil {
 		panic(err)

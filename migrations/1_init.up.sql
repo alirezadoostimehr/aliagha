@@ -67,14 +67,14 @@ CREATE TABLE IF NOT EXISTS flights (
 CREATE TABLE IF NOT EXISTS tickets (
     id int PRIMARY KEY AUTO_INCREMENT ,
     u_id int NOT NULL ,
-    p_id int NOT NULL ,
+    p_ids varchar(255) NOT NULL ,
     f_id int NOT NULL ,
     status text NOT NULL ,
+    price int NOT NULL ,
     created_at datetime DEFAULT NOW() ,
     updated_at datetime DEFAULT NOW() ON UPDATE NOW() ,
 
     FOREIGN KEY (u_id) REFERENCES users(id) ,
-    FOREIGN KEY (p_id) REFERENCES passengers(id) ,
     FOREIGN KEY (f_id) REFERENCES flights(id)
     );
 
