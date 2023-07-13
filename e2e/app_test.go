@@ -1,11 +1,15 @@
 package e2e
 
 import (
+	"aliagha/services"
+	utl "aliagha/utils"
+	"bou.ke/monkey"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"os/exec"
+	"reflect"
 	"strings"
 	"syscall"
 	"testing"
@@ -151,7 +155,7 @@ func TestApp(t *testing.T) {
 		resp, err := callHandler("GET", reqPath, "", loginToken.Token)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "Passenger reacts abnormally to valid request for getting")
-		t.Log("Login reacts normally to valid request for getting")
+		t.Log("Passenger reacts normally to valid request for getting")
 
 		responseBody, err := ioutil.ReadAll(resp.Body)
 		assert.NoError(t, err, "Passenger(get) returns problematic body")
@@ -162,8 +166,39 @@ func TestApp(t *testing.T) {
 	})
 
 	t.Run("Requesting for flight info", func(t *testing.T) {
-		reqPath := "/flights/reserve"
-		reqBody := `{"flight_id": 1, "count": 10}"`
+		monkey.PatchInstanceMethod(reflect.TypeOf(&services.APIMockClient{}), "GetFlights", func(_ *services.APIMockClient, depCity string, arrCity string, date string) ([]services.FlightResponse, error) {
+			res := make([]services.FlightResponse, 0, 1)
+			depTime, _ := utl.ParseDate(date)
+			res = append(res, services.FlightResponse{
+				ID: 1,
+				DepCity: services.City{
+					ID:   1,
+					Name: depCity,
+				},
+				ArrCity: services.City{
+					ID:   2,
+					Name: arrCity,
+				},
+				DepTime: depTime,
+				ArrTime: depTime.Add(1 * time.Hour),
+				Airplane: services.Airplane{
+					ID:   1,
+					Name: "Boeing777",
+				},
+				Airline:        "Emirates",
+				Price:          1000,
+				CxlSitID:       1,
+				RemainingSeats: 10,
+			})
+			return res, nil
+		})
+		reqPath := "/flights?departure_city=Athens&arrival_city=London&date=2020-04-11"
+		resp, err := callHandler("GET", reqPath, "", "")
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode, "Get flight reacts abnormally to valid request")
+		t.Log("Get flight reacts normally to valid request for getting")
+		monkey.UnpatchAll()
+
 	})
 	err = cmd.Process.Signal(syscall.SIGINT)
 	assert.NoError(t, err)
