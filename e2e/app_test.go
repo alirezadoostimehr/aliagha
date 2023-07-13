@@ -24,9 +24,13 @@ type loginResponse struct {
 	Token string `json:"token"`
 }
 
-func callHandler(method, path, body string) (*http.Response, error) {
+func callHandler(method, path, body, token string) (*http.Response, error) {
 	req, err := http.NewRequest(method, baseUrl+path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -50,25 +54,25 @@ func TestApp(t *testing.T) {
 		reqPath := "/user/register"
 
 		reqBody := `{"name": "ali", "cellphone": "1234567890"}`
-		resp, err := callHandler("POST", reqPath, reqBody)
+		resp, err := callHandler("POST", reqPath, reqBody, "")
 		assert.NoError(t, err)
 		assert.Equal(t, resp.StatusCode, http.StatusBadRequest, "Register reacts abnormally to invalid input")
 		t.Log("Register reacts normally to invalid input")
 
 		reqBody = `{"name": "ali", "cellphone": "1234567890", "email":"test@yahoo.com", "password":"1234567"}`
-		resp, err = callHandler("POST", reqPath, reqBody)
+		resp, err = callHandler("POST", reqPath, reqBody, "")
 		assert.NoError(t, err)
 		assert.Equal(t, resp.StatusCode, http.StatusCreated, "Register reacts abnormally to valid input")
 		t.Log("Register reacts normally to valid input")
 
 		reqBody = `{"name": "ali", "cellphone": "1234567890", "email":"test@yahoo.com", "password":"1234567"}`
-		resp, err = callHandler("POST", reqPath, reqBody)
+		resp, err = callHandler("POST", reqPath, reqBody, "")
 		assert.NoError(t, err)
 		assert.Equal(t, resp.StatusCode, http.StatusBadRequest, "Register reacts abnormally to repeated input")
 		t.Log("Register reacts normally to repeated input")
 
 		reqBody = `{"name": "ali", "cellphone": "0234567890", "email":"test2@yahoo.com", "password":"1234567"}`
-		resp, err = callHandler("POST", reqPath, reqBody)
+		resp, err = callHandler("POST", reqPath, reqBody, "")
 		assert.NoError(t, err)
 		assert.Equal(t, resp.StatusCode, http.StatusCreated, "Register reacts abnormally to second valid input")
 		t.Log("Register reacts normally to second valid input")
@@ -81,20 +85,20 @@ func TestApp(t *testing.T) {
 		reqPath := "/user/login"
 
 		reqBody := `{"name": "ali", "cellphone": "1234567890"}`
-		resp, err := callHandler("POST", reqPath, reqBody)
+		resp, err := callHandler("POST", reqPath, reqBody, "")
 		assert.NoError(t, err)
 		assert.Equal(t, resp.StatusCode, http.StatusBadRequest, "Login reacts abnormally to invalid input")
 		t.Log("Login reacts normally to imperfect input")
 
 		reqBody = `{"email":"test@yahoo.com", "password":"wrongPassword"}`
-		resp, err = callHandler("POST", reqPath, reqBody)
+		resp, err = callHandler("POST", reqPath, reqBody, "")
 		assert.NoError(t, err)
 		assert.Equal(t, resp.StatusCode, http.StatusUnauthorized, "Login reacts abnormally to imperfect input")
 		t.Log("Login reacts normally to imperfect input")
 
 		reqPath = "/user/login"
 		reqBody = `{"email":"test@yahoo.com", "password":"1234567"}`
-		resp, err = callHandler("POST", reqPath, reqBody)
+		resp, err = callHandler("POST", reqPath, reqBody, "")
 		assert.NoError(t, err)
 		assert.Equal(t, resp.StatusCode, http.StatusOK, "Login reacts abnormally to valid input")
 		t.Log("Login reacts normally to valid input")
@@ -108,9 +112,59 @@ func TestApp(t *testing.T) {
 	})
 
 	t.Run("Making passengers", func(t *testing.T) {
+		reqPath := "/passengers"
 
+		reqBody := `{"name": "ali", "cellphone": "1234567890"}`
+		resp, err := callHandler("POST", reqPath, reqBody, loginToken.Token)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode, "Passenger reacts abnormally to invalid input")
+		t.Log("Login reacts normally to imperfect input")
+
+		reqBody = `{"name": "ali", "national_code": "1213548980", "birth_date": "2003-02-01"}`
+		resp, err = callHandler("POST", reqPath, reqBody, loginToken.Token)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, resp.StatusCode, "Passenger reacts abnormally to valid input")
+		t.Log("Login reacts normally to valid input")
+
+		reqBody = `{"name": "ali", "national_code": "1213548980", "birth_date": "2003-02-01"}`
+		resp, err = callHandler("POST", reqPath, reqBody, loginToken.Token)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode, "Passenger reacts abnormally to repeated input")
+		t.Log("Login reacts normally to repeated input")
+
+		reqBody = `{"name": "ali", "national_code": "1213548981", "birth_date": "2003-02-01"}`
+		resp, err = callHandler("POST", reqPath, reqBody, loginToken.Token)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, resp.StatusCode, "Passenger reacts abnormally to second valid input")
+		t.Log("Login reacts normally to second valid input")
+
+		reqBody = `{"name": "ali", "national_code": "1213548982", "birth_date": "2003-02-01"}`
+		resp, err = callHandler("POST", reqPath, reqBody, loginToken.Token)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, resp.StatusCode, "Passenger reacts abnormally to third valid input")
+		t.Log("Login reacts normally to third valid input")
 	})
 
+	passengers := make(map[string]interface{})
+	t.Run("Getting Passengers", func(t *testing.T) {
+		reqPath := "/passengers"
+		resp, err := callHandler("GET", reqPath, "", loginToken.Token)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode, "Passenger reacts abnormally to valid request for getting")
+		t.Log("Login reacts normally to valid request for getting")
+
+		responseBody, err := ioutil.ReadAll(resp.Body)
+		assert.NoError(t, err, "Passenger(get) returns problematic body")
+
+		err = json.Unmarshal(responseBody, &passengers)
+		assert.NoError(t, err, "Passenger(get) returns problematic body")
+		t.Log("Passenger(get) returns fine body")
+	})
+
+	t.Run("Requesting for flight info", func(t *testing.T) {
+		reqPath := "/flights/reserve"
+		reqBody := `{"flight_id": 1, "count": 10}"`
+	})
 	err = cmd.Process.Signal(syscall.SIGINT)
 	assert.NoError(t, err)
 }
