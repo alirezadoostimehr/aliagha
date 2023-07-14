@@ -24,5 +24,5 @@ cd "$PROJECT_DIR" || exit
 ./mycommand migrate -c config -a up -f migrations
 
 # Run the serve command
-./mycommand serve -c ./config
+./mycommand serve -c config
 

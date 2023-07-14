@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type FlightTestSuite struct {
+type GetFlightTestSuite struct {
 	suite.Suite
 	flights     []services.FlightResponse
 	flight      *Flight
@@ -33,7 +33,7 @@ type FlightTestSuite struct {
 	redisServer *miniredis.Miniredis
 }
 
-func (suite *FlightTestSuite) SetupSuite() {
+func (suite *GetFlightTestSuite) SetupSuite() {
 	vldt := validator.New()
 	suite.e = echo.New()
 	suite.flight = &Flight{
@@ -63,15 +63,15 @@ func (suite *FlightTestSuite) SetupSuite() {
 	suite.flight.Redis = client
 }
 
-func (suite *FlightTestSuite) SetupTest() {
+func (suite *GetFlightTestSuite) SetupTest() {
 	suite.flight.Redis.FlushAll()
 }
 
-func (suite *FlightTestSuite) TearDownSuite() {
+func (suite *GetFlightTestSuite) TearDownSuite() {
 	suite.redisServer.Close()
 }
 
-func (suite *FlightTestSuite) CallHandler(query string) (*httptest.ResponseRecorder, error) {
+func (suite *GetFlightTestSuite) CallHandler(query string) (*httptest.ResponseRecorder, error) {
 	req := httptest.NewRequest(http.MethodGet, "/flights"+query, bytes.NewReader([]byte("")))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	res := httptest.NewRecorder()
@@ -85,7 +85,7 @@ func (suite *FlightTestSuite) CallHandler(query string) (*httptest.ResponseRecor
 	return res, nil
 }
 
-func (suite *FlightTestSuite) TestGetFlight_NoCache_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_NoCache_Success() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusOK
 	expectedResponse := `[{"id":1,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T10:00:00Z","arr_time":"2023-06-28T13:00:00Z","airplane":{"id":1,"name":"Boeing737"},"airline":"AirlineX","price":200,"cxl_sit_id":123,"remaining_seats":50},{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","airplane":{"id":2,"name":"AirbusA320"},"airline":"AirlineY","price":250,"cxl_sit_id":456,"remaining_seats":30}]`
@@ -106,7 +106,7 @@ func (suite *FlightTestSuite) TestGetFlight_NoCache_Success() {
 	require.Equal(cache, expectedResponse)
 }
 
-func (suite *FlightTestSuite) TestGetFlight_WithCache_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_WithCache_Success() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusOK
 	expectedResponse := `[{"id":1,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T10:00:00Z","arr_time":"2023-06-28T13:00:00Z","airplane":{"id":1,"name":"Boeing737"},"airline":"AirlineX","price":200,"cxl_sit_id":123,"remaining_seats":50},{"id":2,"dep_city":{"id":1,"name":"CityA"},"arr_city":{"id":2,"name":"CityB"},"dep_time":"2023-06-28T14:00:00Z","arr_time":"2023-06-28T17:00:00Z","airplane":{"id":2,"name":"AirbusA320"},"airline":"AirlineY","price":250,"cxl_sit_id":456,"remaining_seats":30}]`
@@ -125,7 +125,7 @@ func (suite *FlightTestSuite) TestGetFlight_WithCache_Success() {
 	require.Equal(expectedResponse, strings.TrimSpace(res.Body.String()))
 }
 
-func (suite *FlightTestSuite) TestGetFlight_WithSortAndFilter_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_WithSortAndFilter_Success() {
 	require := suite.Require()
 
 	var a services.APIMockClient
@@ -153,7 +153,7 @@ func (suite *FlightTestSuite) TestGetFlight_WithSortAndFilter_Success() {
 	}
 }
 
-func (suite *FlightTestSuite) TestGetFlight_BindErr_Failure() {
+func (suite *GetFlightTestSuite) TestGetFlight_BindErr_Failure() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusBadRequest
 
@@ -162,7 +162,7 @@ func (suite *FlightTestSuite) TestGetFlight_BindErr_Failure() {
 	require.Equal(expectedStatusCode, res.Code)
 }
 
-func (suite *FlightTestSuite) TestGetFlight_ValidationErr_Failure() {
+func (suite *GetFlightTestSuite) TestGetFlight_ValidationErr_Failure() {
 	require := suite.Require()
 
 	tests := []struct {
@@ -182,7 +182,7 @@ func (suite *FlightTestSuite) TestGetFlight_ValidationErr_Failure() {
 	}
 }
 
-func (suite *FlightTestSuite) TestGetFlight_RedisErr_Failure() {
+func (suite *GetFlightTestSuite) TestGetFlight_RedisErr_Failure() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusInternalServerError
 
@@ -196,7 +196,7 @@ func (suite *FlightTestSuite) TestGetFlight_RedisErr_Failure() {
 	require.Equal(expectedStatusCode, res.Code)
 }
 
-func (suite *FlightTestSuite) TestGetFlight_APIMockErr_Failure() {
+func (suite *GetFlightTestSuite) TestGetFlight_APIMockErr_Failure() {
 	require := suite.Require()
 	expectedStatusCode := http.StatusInternalServerError
 
@@ -210,7 +210,7 @@ func (suite *FlightTestSuite) TestGetFlight_APIMockErr_Failure() {
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 }
-func (suite *FlightTestSuite) TestGetFlight_FilterByAirline_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_FilterByAirline_Success() {
 	require := suite.Require()
 
 	var a services.APIMockClient
@@ -235,7 +235,7 @@ func (suite *FlightTestSuite) TestGetFlight_FilterByAirline_Success() {
 		require.Equal(t.response, strings.TrimSpace(res.Body.String()))
 	}
 }
-func (suite *FlightTestSuite) TestGetFlight_FilterByAirplaneName_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_FilterByAirplaneName_Success() {
 	require := suite.Require()
 
 	var a services.APIMockClient
@@ -260,7 +260,7 @@ func (suite *FlightTestSuite) TestGetFlight_FilterByAirplaneName_Success() {
 		require.Equal(t.response, strings.TrimSpace(res.Body.String()))
 	}
 }
-func (suite *FlightTestSuite) TestGetFlight_FilterByDeptime_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_FilterByDeptime_Success() {
 	require := suite.Require()
 
 	var a services.APIMockClient
@@ -285,7 +285,7 @@ func (suite *FlightTestSuite) TestGetFlight_FilterByDeptime_Success() {
 		require.Equal(t.response, strings.TrimSpace(res.Body.String()))
 	}
 }
-func (suite *FlightTestSuite) TestGetFlight_FilterByRemainingSeats_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_FilterByRemainingSeats_Success() {
 	require := suite.Require()
 
 	var a services.APIMockClient
@@ -311,5 +311,5 @@ func (suite *FlightTestSuite) TestGetFlight_FilterByRemainingSeats_Success() {
 	}
 }
 func TestFlight(t *testing.T) {
-	suite.Run(t, new(FlightTestSuite))
+	suite.Run(t, new(GetFlightTestSuite))
 }
