@@ -13,9 +13,9 @@ type Flight struct {
 	AirplaneID       int32              `gorm:"column:airplane_id;not null" json:"airplane_id"`
 	Airplane         Airplane           `gorm:"foreignKey:AirplaneID"`
 	Airline          string             `gorm:"column:airline;not null" json:"airline"`
-	Price      int32              `gorm:"column:price;not null" json:"price"`
+	Price            int32              `gorm:"column:price;not null" json:"price"`
 	CxlSitID         int32              `gorm:"column:cxl_sit_id;not null" json:"cxl_sit_id"`
-	CxlSit     CancelingSituation `gorm:"foreignKey:CxlSitID"`
+	CxlSit           CancelingSituation `gorm:"foreignKey:CxlSitID"`
 	FlightClass      string             `gorm:"column:flight_class;not null" json:"flight_class"`
 	BaggageAllowance string             `gorm:"column:baggage_allowance;not null" json:"baggage_allowance"`
 	MealService      string             `gorm:"column:meal_service;not null" json:"meal_service"`

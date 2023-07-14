@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS flights (
     arr_time datetime NOT NULL ,
     airplane_id int NOT NULL ,
     airline varchar(255) NOT NULL ,
+    price int NOT NULL ,
     cxl_sit_id int NOT NULL ,
     flight_class varchar(255) NOT NULL ,
     baggage_allowance varchar(255) NOT NULL ,

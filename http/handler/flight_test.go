@@ -210,7 +210,7 @@ func (suite *GetFlightTestSuite) TestGetFlight_APIMockErr_Failure() {
 	require.NoError(err)
 	require.Equal(expectedStatusCode, res.Code)
 }
-func (suite *FlightTestSuite) TestGetFlight_FilterByAirline_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_FilterByAirline_Success() {
 	require := suite.Require()
 
 	var a services.APIMockClient
@@ -235,7 +235,7 @@ func (suite *FlightTestSuite) TestGetFlight_FilterByAirline_Success() {
 		require.Equal(t.response, strings.TrimSpace(res.Body.String()))
 	}
 }
-func (suite *FlightTestSuite) TestGetFlight_FilterByAirplaneName_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_FilterByAirplaneName_Success() {
 	require := suite.Require()
 
 	var a services.APIMockClient
@@ -260,7 +260,7 @@ func (suite *FlightTestSuite) TestGetFlight_FilterByAirplaneName_Success() {
 		require.Equal(t.response, strings.TrimSpace(res.Body.String()))
 	}
 }
-func (suite *FlightTestSuite) TestGetFlight_FilterByDeptime_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_FilterByDeptime_Success() {
 	require := suite.Require()
 
 	var a services.APIMockClient
@@ -285,7 +285,7 @@ func (suite *FlightTestSuite) TestGetFlight_FilterByDeptime_Success() {
 		require.Equal(t.response, strings.TrimSpace(res.Body.String()))
 	}
 }
-func (suite *FlightTestSuite) TestGetFlight_FilterByRemainingSeats_Success() {
+func (suite *GetFlightTestSuite) TestGetFlight_FilterByRemainingSeats_Success() {
 	require := suite.Require()
 
 	var a services.APIMockClient

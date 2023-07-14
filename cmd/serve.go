@@ -85,7 +85,7 @@ func startServer() {
 	flightReservation := handler.FlightReservation{DB: db, Validator: vldt, APIMock: mockClient}
 	e.POST("/flights/reserve", flightReservation.Reserve, middleware.AuthMiddleware(cfg.JWT.SecretKey))
 
-	e.GET(cfg.Zarinpal.CallbackUrl, flightReservation.CallBack)
+	e.GET(cfg.Zarinpal.CallbackUrl, flightReservation.VerifyPayment)
 
 	err = e.Start("localhost:3030")
 	if err != nil {
